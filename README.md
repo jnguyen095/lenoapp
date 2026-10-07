@@ -117,6 +117,7 @@ với mã 401 (hết phiên), 403 (không có quyền), 404, 409 (bàn/đơn đ�
 | POST | `tables/{id}/merge` | `target_table_id` | đơn đích |
 | GET | `menu` | | `categories[].products[]` |
 | GET | `orders/active` | | `orders[]` |
+| GET | `orders/history?date=YYYY-MM-DD` | | đơn người đăng nhập tạo trong ngày (mặc định hôm nay) + `summary` |
 | GET | `orders/{id}` | | đơn |
 | PATCH | `orders/{id}` | `note` | đơn |
 | POST | `orders/{id}/items` | `items: [{product_id, qty, note}]` | đơn |

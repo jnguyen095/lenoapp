@@ -62,6 +62,7 @@ class Tickets {
     return Ticket([
       if (settings.shopName.isNotEmpty) TicketText(settings.shopName, align: TextAlign.center, scale: 1.4, bold: true),
       if (settings.shopAddress.isNotEmpty) TicketText(settings.shopAddress, align: TextAlign.center),
+      if (settings.shopPhone.isNotEmpty) TicketText('ĐT: ${settings.shopPhone}', align: TextAlign.center),
       TicketText(paid ? 'HÓA ĐƠN BÁN HÀNG' : 'PHIẾU TẠM TÍNH', align: TextAlign.center, bold: true),
       const TicketDivider(),
       TicketText(paid ? 'Số HĐ: ${order.orderNo}' : 'Mã đơn: ${order.orderNo}'),

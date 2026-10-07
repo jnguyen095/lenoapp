@@ -440,3 +440,104 @@ enum PaymentMethod {
   final String code;
   final String label;
 }
+
+/// Một đơn trong "Lịch sử đơn hàng" của nhân viên.
+class HistoryOrder {
+  const HistoryOrder({
+    required this.id,
+    required this.orderNo,
+    required this.status,
+    required this.tableName,
+    required this.totalAmount,
+    required this.itemCount,
+    this.tableId,
+    this.note,
+    this.methodLabel,
+    this.createdAt,
+    this.paidAt,
+  });
+
+  factory HistoryOrder.fromJson(Map<String, dynamic> j) => HistoryOrder(
+        id: _int(j['id']),
+        orderNo: j['order_no'] as String,
+        status: j['status'] as String,
+        tableId: _intOrNull(j['table_id']),
+        tableName: (j['table_name'] as String?) ?? 'Mang đi',
+        totalAmount: _money(j['total_amount']),
+        itemCount: _int(j['item_count']),
+        note: _str(j['note']),
+        methodLabel: _str(j['method_label']),
+        createdAt: _str(j['created_at']),
+        paidAt: _str(j['paid_at']),
+      );
+
+  final int id;
+  final String orderNo;
+  final String status;
+  final int? tableId;
+  final String tableName;
+  final double totalAmount;
+  final int itemCount;
+  final String? note;
+  final String? methodLabel;
+  final String? createdAt;
+  final String? paidAt;
+
+  bool get isPaid => status == Status.paid;
+  bool get isActive => status == Status.open || status == Status.waitPayment;
+}
+
+/// Tiền đã thu theo một hình thức thanh toán (Tiền mặt, Chuyển khoản…).
+class MethodTotal {
+  const MethodTotal({required this.method, required this.label, required this.count, required this.total});
+
+  factory MethodTotal.fromJson(Map<String, dynamic> j) => MethodTotal(
+        method: j['method'] as String,
+        label: j['label'] as String,
+        count: _int(j['count']),
+        total: _money(j['total']),
+      );
+
+  final String method;
+  final String label;
+  final int count;
+  final double total;
+}
+
+/// Đơn do người đang đăng nhập tạo trong một ngày + tổng kết.
+class OrderHistory {
+  const OrderHistory({
+    required this.date,
+    required this.orders,
+    required this.paidCount,
+    required this.paidTotal,
+    required this.openCount,
+    required this.openTotal,
+    this.byMethod = const [],
+  });
+
+  factory OrderHistory.fromJson(Map<String, dynamic> j) {
+    final s = j['summary'] as Map<String, dynamic>;
+    return OrderHistory(
+      date: j['date'] as String,
+      orders: (j['orders'] as List).map((o) => HistoryOrder.fromJson(o as Map<String, dynamic>)).toList(growable: false),
+      paidCount: _int(s['paid_count']),
+      paidTotal: _money(s['paid_total']),
+      openCount: _int(s['open_count']),
+      openTotal: _money(s['open_total']),
+      byMethod: ((s['by_method'] as List?) ?? const [])
+          .map((m) => MethodTotal.fromJson(m as Map<String, dynamic>))
+          .toList(growable: false),
+    );
+  }
+
+  final String date;
+  final List<HistoryOrder> orders;
+  final int paidCount;
+  final double paidTotal;
+  final int openCount;
+  final double openTotal;
+
+  /// Đã thu theo từng hình thức thanh toán.
+  final List<MethodTotal> byMethod;
+}

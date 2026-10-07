@@ -25,9 +25,11 @@ import 'package:leno_pos/printing/usb_printer.dart';
 import 'package:leno_pos/state/auth.dart';
 import 'package:leno_pos/state/printing.dart';
 import 'package:leno_pos/ui/screens/home_screen.dart';
+import 'package:leno_pos/ui/screens/order_history_screen.dart';
 import 'package:leno_pos/ui/screens/order_screen.dart';
 import 'package:leno_pos/ui/screens/printer_edit_screen.dart';
 import 'package:leno_pos/ui/screens/printer_settings_screen.dart';
+import 'package:leno_pos/ui/screens/store_settings_screen.dart';
 import 'package:leno_pos/ui/widgets/top_toast.dart';
 
 const outDir = 'build/screenshots';
@@ -125,6 +127,27 @@ class FakeRepo extends PosRepository {
   Future<List<MenuCategory>> menu() async => menu_;
   @override
   Future<OrderDetail> order(int orderId) async => order_();
+  @override
+  Future<OrderHistory> orderHistory({String? date}) async => OrderHistory(
+        date: '2026-10-07',
+        paidCount: 2,
+        paidTotal: 213000,
+        openCount: 2,
+        openTotal: 289000,
+        byMethod: const [
+          MethodTotal(method: 'CASH', label: 'Tiền mặt', count: 1, total: 175000),
+          MethodTotal(method: 'CARD', label: 'Thẻ', count: 0, total: 0),
+          MethodTotal(method: 'TRANSFER', label: 'Chuyển khoản', count: 1, total: 38000),
+          MethodTotal(method: 'QR', label: 'QR Pay', count: 0, total: 0),
+        ],
+        orders: [
+          HistoryOrder(id: 83, orderNo: 'ORD261007-0192B', status: 'OPEN', tableName: 'Bàn 3', totalAmount: 175000, itemCount: 7, createdAt: _ago(27)),
+          HistoryOrder(id: 82, orderNo: 'ORD261007-A11F2', status: 'PAID', tableName: 'Mang đi', totalAmount: 38000, itemCount: 2, methodLabel: 'Chuyển khoản', createdAt: _ago(60), paidAt: _ago(55)),
+          HistoryOrder(id: 81, orderNo: 'ORD261007-77C01', status: 'OPEN', tableName: 'Bàn 8', totalAmount: 114000, itemCount: 5, createdAt: _ago(80)),
+          HistoryOrder(id: 80, orderNo: 'ORD261007-0093D', status: 'PAID', tableName: 'Bàn 5', totalAmount: 175000, itemCount: 6, methodLabel: 'Tiền mặt', createdAt: _ago(140), paidAt: _ago(95)),
+        ],
+      );
+
   @override
   Future<List<KitchenSlip>> kitchenHistory(int orderId) async => [
         KitchenSlip(
@@ -262,6 +285,35 @@ void main() {
         interact: () => tester.tap(find.byIcon(Icons.history)));
     await shoot(tester, 'order_phone_items_pending', sizes['phone']!, const OrderScreen(orderId: 83),
         interact: () => tester.tap(find.textContaining('Món đã gọi')));
+    addTearDown(tester.view.reset);
+  });
+
+  testWidgets('menu drawer + store settings', (tester) async {
+    await shoot(tester, 'drawer_home_tablet_landscape', sizes['tablet_landscape']!, const HomeScreen(),
+        interact: () => tester.tap(find.byIcon(Icons.menu)));
+    await shoot(tester, 'drawer_order_phone', sizes['phone']!, const OrderScreen(orderId: 83),
+        interact: () => tester.tap(find.byIcon(Icons.menu)));
+    await shoot(tester, 'store_settings_tablet_portrait', sizes['tablet_portrait']!, const StoreSettingsScreen());
+    addTearDown(tester.view.reset);
+  });
+
+  testWidgets('menu search', (tester) async {
+    Future<void> search() async {
+      await tester.tap(find.byIcon(Icons.search));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'tra');
+    }
+
+    await shoot(tester, 'search_tablet_landscape', sizes['tablet_landscape']!, const OrderScreen(orderId: 83), interact: search);
+    await shoot(tester, 'search_phone', sizes['phone']!, const OrderScreen(orderId: 83), interact: search);
+    addTearDown(tester.view.reset);
+  });
+
+  testWidgets('order history', (tester) async {
+    await shoot(tester, 'history_tablet_landscape', sizes['tablet_landscape']!, const OrderHistoryScreen());
+    await shoot(tester, 'history_phone', sizes['phone']!, const OrderHistoryScreen());
+    await shoot(tester, 'drawer_history_phone', sizes['phone']!, const OrderHistoryScreen(),
+        interact: () => tester.tap(find.byIcon(Icons.menu)));
     addTearDown(tester.view.reset);
   });
 

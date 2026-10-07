@@ -35,14 +35,14 @@ class Layout {
           mainAxisSpacing: gridSpacing,
         );
 
-  /// Thực đơn: tablet cố định 4 món một hàng; điện thoại tự chia cột (thường 3).
+  /// Thực đơn: tablet cố định 5 món một hàng; điện thoại tự chia cột (thường 3).
   /// Chiều cao ô tính theo bề rộng thật của ô: ảnh thấp hơn bề rộng + 40 cho tên món.
   SliverGridDelegate productGrid(double availableWidth) {
-    final columns = isTablet ? 4 : ((availableWidth - pagePadding.horizontal + gridSpacing) / (150 + gridSpacing)).ceil().clamp(2, 4);
+    final columns = isTablet ? 5 : ((availableWidth - pagePadding.horizontal + gridSpacing) / (150 + gridSpacing)).ceil().clamp(2, 4);
     final tileWidth = (availableWidth - pagePadding.horizontal - gridSpacing * (columns - 1)) / columns;
     return SliverGridDelegateWithFixedCrossAxisCount(
       crossAxisCount: columns,
-      mainAxisExtent: (tileWidth * 0.68).clamp(64.0, 150.0) + 40,
+      mainAxisExtent: (tileWidth * 0.72).clamp(70.0, 150.0) + 40,
       crossAxisSpacing: gridSpacing,
       mainAxisSpacing: gridSpacing,
     );

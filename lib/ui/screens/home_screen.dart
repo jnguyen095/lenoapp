@@ -7,10 +7,11 @@ import '../../state/auth.dart';
 import '../../state/pos.dart';
 import '../../state/printing.dart';
 import '../layout.dart';
+import '../widgets/app_drawer.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/table_card.dart';
 import 'order_screen.dart';
-import 'printer_settings_screen.dart';
+
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -22,59 +23,19 @@ class HomeScreen extends ConsumerWidget {
     final user = session.user;
 
     return Scaffold(
+      drawer: const AppDrawer(current: AppPage.home),
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(user.canTables ? 'Sơ đồ bàn' : 'Đơn đang phục vụ'),
-            // Tên quán trong Cài đặt máy in (giống dòng đầu hóa đơn), sửa được ngay trên máy.
+            // Tên quán trong Cài đặt cửa hàng (giống dòng đầu hóa đơn), sửa được ngay trên máy.
             Text(
               ref.watch(printSettingsProvider).valueOrNull?.shopName ?? '',
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
         ),
-        actions: [
-          PopupMenuButton<String>(
-            tooltip: 'Tài khoản',
-            icon: CircleAvatar(
-              radius: 16,
-              child: Text(user.fullname.isEmpty ? '?' : user.fullname.characters.first.toUpperCase()),
-            ),
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                enabled: false,
-                child: ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(user.fullname),
-                  subtitle: Text('${user.roleLabel}\n${session.serverUrl}'),
-                  isThreeLine: true,
-                ),
-              ),
-              const PopupMenuDivider(),
-              const PopupMenuItem(
-                value: 'printers',
-                child: ListTile(contentPadding: EdgeInsets.zero, leading: Icon(Icons.print_outlined), title: Text('Cài đặt máy in')),
-              ),
-              const PopupMenuItem(
-                value: 'logout',
-                child: ListTile(contentPadding: EdgeInsets.zero, leading: Icon(Icons.logout), title: Text('Đăng xuất')),
-              ),
-            ],
-            onSelected: (value) async {
-              if (value == 'printers') {
-                await Navigator.of(context)
-                    .push(MaterialPageRoute<void>(builder: (_) => const PrinterSettingsScreen()));
-                return;
-              }
-              if (value == 'logout' &&
-                  await confirmDialog(context, title: 'Đăng xuất khỏi máy này?', confirmLabel: 'Đăng xuất')) {
-                await ref.read(authProvider.notifier).logout();
-              }
-            },
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
       body: user.canTables ? _TableMap(canOrder: user.canOrders) : const _ActiveOrders(),
     );

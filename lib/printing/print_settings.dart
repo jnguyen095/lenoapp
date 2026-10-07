@@ -154,6 +154,7 @@ class PrintSettings {
     this.autoPrintReceipt = true,
     this.shopName = 'Leno',
     this.shopAddress = '28 Võ Văn Kiệt, BMT',
+    this.shopPhone = '',
     this.footer = 'Cảm ơn quý khách - Hẹn gặp lại!',
   });
 
@@ -165,6 +166,7 @@ class PrintSettings {
         autoPrintReceipt: j['auto_print_receipt'] != false,
         shopName: (j['shop_name'] as String?) ?? 'Leno',
         shopAddress: (j['shop_address'] as String?) ?? '',
+        shopPhone: (j['shop_phone'] as String?) ?? '',
         footer: (j['footer'] as String?) ?? '',
       );
 
@@ -188,6 +190,7 @@ class PrintSettings {
   /// Dòng đầu hóa đơn / phiếu tạm tính (web đang in "Leno" + địa chỉ).
   final String shopName;
   final String shopAddress;
+  final String shopPhone;
   final String footer;
 
   Iterable<PrinterConfig> get activePrinters => printers.where((p) => p.enabled);
@@ -200,6 +203,7 @@ class PrintSettings {
         'auto_print_receipt': autoPrintReceipt,
         'shop_name': shopName,
         'shop_address': shopAddress,
+        'shop_phone': shopPhone,
         'footer': footer,
       });
 
@@ -209,6 +213,7 @@ class PrintSettings {
     bool? autoPrintReceipt,
     String? shopName,
     String? shopAddress,
+    String? shopPhone,
     String? footer,
   }) =>
       PrintSettings(
@@ -217,6 +222,7 @@ class PrintSettings {
         autoPrintReceipt: autoPrintReceipt ?? this.autoPrintReceipt,
         shopName: shopName ?? this.shopName,
         shopAddress: shopAddress ?? this.shopAddress,
+        shopPhone: shopPhone ?? this.shopPhone,
         footer: footer ?? this.footer,
       );
 

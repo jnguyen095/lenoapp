@@ -7,29 +7,28 @@ import '../../state/auth.dart';
 import '../../state/pos.dart';
 import '../layout.dart';
 
-/// Thực đơn để gọi món: tìm kiếm (không cần dấu), lọc danh mục, bấm món để thêm 1,
-/// nhấn giữ để chọn số lượng + ghi chú.
+/// Thực đơn để gọi món: lọc danh mục, bấm món để thêm 1, nhấn giữ để chọn số lượng + ghi chú.
+/// Ô tìm món nằm trên thanh tiêu đề của màn hình đơn (nút 🔍) — [query] là chữ đang tìm (không cần dấu).
 class MenuPanel extends ConsumerStatefulWidget {
-  const MenuPanel({super.key, required this.detail, required this.onAdd, required this.onAddWithOptions});
+  const MenuPanel({
+    super.key,
+    required this.detail,
+    required this.onAdd,
+    required this.onAddWithOptions,
+    this.query = '',
+  });
 
   final OrderDetail detail;
   final ValueChanged<Product> onAdd;
   final ValueChanged<Product> onAddWithOptions;
+  final String query;
 
   @override
   ConsumerState<MenuPanel> createState() => _MenuPanelState();
 }
 
 class _MenuPanelState extends ConsumerState<MenuPanel> {
-  final _search = TextEditingController();
   int? _categoryId;
-  String _query = '';
-
-  @override
-  void dispose() {
-    _search.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +48,7 @@ class _MenuPanelState extends ConsumerState<MenuPanel> {
         ),
       ),
       data: (categories) {
-        final q = foldVietnamese(_query.trim());
+        final q = foldVietnamese(widget.query.trim());
         final products = <Product>[
           for (final c in categories)
             if (q.isNotEmpty || _categoryId == null || c.id == _categoryId)
@@ -59,46 +58,28 @@ class _MenuPanelState extends ConsumerState<MenuPanel> {
 
         return Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-              child: TextField(
-                controller: _search,
-                decoration: InputDecoration(
-                  isDense: true,
-                  hintText: 'Tìm món (vd: ca phe sua)',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _query.isEmpty
-                      ? null
-                      : IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _search.clear();
-                            setState(() => _query = '');
-                          },
-                        ),
-                ),
-                onChanged: (v) => setState(() => _query = v),
-              ),
-            ),
-            if (_query.isEmpty)
-              SizedBox(
-                height: 44,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  children: [
-                    _CategoryChip(
-                      label: 'Tất cả',
-                      selected: _categoryId == null,
-                      onTap: () => setState(() => _categoryId = null),
-                    ),
-                    for (final c in categories)
+            if (q.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: SizedBox(
+                  height: 44,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    children: [
                       _CategoryChip(
-                        label: c.name,
-                        selected: _categoryId == c.id,
-                        onTap: () => setState(() => _categoryId = c.id),
+                        label: 'Tất cả',
+                        selected: _categoryId == null,
+                        onTap: () => setState(() => _categoryId = null),
                       ),
-                  ],
+                      for (final c in categories)
+                        _CategoryChip(
+                          label: c.name,
+                          selected: _categoryId == c.id,
+                          onTap: () => setState(() => _categoryId = c.id),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             Expanded(
@@ -171,12 +152,13 @@ class ProductTile extends ConsumerWidget {
     final scheme = theme.colorScheme;
     final imageUrl = ref.watch(apiClientProvider).imageUrl(product.image);
 
+    // Món chưa có ảnh: hình ly cà phê mặc định.
     final placeholder = Container(
       color: scheme.primaryContainer,
-      alignment: Alignment.center,
-      child: Text(
-        _initials(product.name),
-        style: theme.textTheme.titleLarge?.copyWith(color: scheme.onPrimaryContainer),
+      alignment: const Alignment(0, -0.25), // chừa chỗ cho nhãn giá ở đáy ảnh
+      child: FractionallySizedBox(
+        heightFactor: 0.5,
+        child: FittedBox(child: Icon(Icons.local_cafe_outlined, color: scheme.primary.withValues(alpha: 0.55))),
       ),
     );
 
@@ -208,11 +190,11 @@ class ProductTile extends ConsumerWidget {
                     bottom: 6,
                     child: Center(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                        decoration: BoxDecoration(color: scheme.primary, borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+                        decoration: BoxDecoration(color: scheme.primary, borderRadius: BorderRadius.circular(14)),
                         child: Text(
                           formatMoney(product.price),
-                          style: theme.textTheme.labelMedium?.copyWith(color: scheme.onPrimary, fontWeight: FontWeight.w700),
+                          style: theme.textTheme.titleSmall?.copyWith(color: scheme.onPrimary, fontWeight: FontWeight.w800),
                         ),
                       ),
                     ),
@@ -254,11 +236,5 @@ class ProductTile extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  static String _initials(String name) {
-    final words = name.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
-    if (words.isEmpty) return '?';
-    return words.take(2).map((w) => w.characters.first.toUpperCase()).join();
   }
 }

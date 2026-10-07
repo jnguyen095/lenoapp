@@ -36,6 +36,10 @@ class PosRepository {
         .toList(growable: false);
   }
 
+  /// Đơn do người đang đăng nhập tạo trong ngày (mặc định hôm nay).
+  Future<OrderHistory> orderHistory({String? date}) async =>
+      OrderHistory.fromJson(await api.get(date == null ? 'orders/history' : 'orders/history?date=$date'));
+
   Future<OrderDetail> order(int orderId) async => OrderDetail.fromJson(await api.get('orders/$orderId'));
 
   Future<OrderDetail> setOrderNote(int orderId, String? note) async =>

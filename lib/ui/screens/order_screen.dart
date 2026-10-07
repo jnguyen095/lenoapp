@@ -6,6 +6,7 @@ import '../../models/models.dart';
 import '../../state/pos.dart';
 import '../../state/printing.dart';
 import '../layout.dart';
+import '../widgets/app_drawer.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/menu_panel.dart';
 import '../widgets/order_panel.dart';
@@ -27,6 +28,18 @@ class OrderScreen extends ConsumerStatefulWidget {
 
 class _OrderScreenState extends ConsumerState<OrderScreen> {
   int _busy = 0;
+
+  // Ô tìm món luôn hiện trên thanh tiêu đề, cùng hàng với tên bàn (khi đơn đang mở).
+  String _query = '';
+  final _searchCtrl = TextEditingController();
+  final _searchFocus = FocusNode();
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    _searchFocus.dispose();
+    super.dispose();
+  }
 
   OrderController get _order => ref.read(orderProvider(widget.orderId).notifier);
 
@@ -220,16 +233,69 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
       onPrintBill: _busy > 0 ? null : () => _printBill(detail),
       onPay: _busy > 0 ? null : () => _pay(detail),
     );
-    final menu = MenuPanel(detail: detail, onAdd: _add, onAddWithOptions: _addWithOptions);
+    final menu = MenuPanel(detail: detail, onAdd: _add, onAddWithOptions: _addWithOptions, query: _query);
+    final searching = showMenu;
 
-    final appBarTitle = Column(
+    final nameColumn = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(order.tableName),
-        Text('${order.orderNo} · ${Status.orderLabel(order.status)}', style: theme.textTheme.bodySmall),
+        Text(order.tableName, maxLines: 1, overflow: TextOverflow.ellipsis),
+        Text('${order.orderNo} · ${Status.orderLabel(order.status)}',
+            maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodySmall),
       ],
     );
-    final actions = [
+    final appBarTitle = !searching
+        ? nameColumn
+        : Row(
+            children: [
+              Flexible(child: nameColumn),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                // Builder: lấy được TabController để nhảy về tab Thực đơn khi gõ (điện thoại).
+                child: Builder(
+                  builder: (context) => _SearchField(
+                    hint: wide ? 'Tìm món (vd: ca phe sua)' : 'Tìm món',
+                    controller: _searchCtrl,
+                    focusNode: _searchFocus,
+                    onChanged: (v) {
+                      setState(() => _query = v);
+                      DefaultTabController.maybeOf(context)?.animateTo(0);
+                    },
+                  ),
+                ),
+              ),
+            ],
+          );
+    // Điện thoại: gom các nút ít dùng vào menu ⋮ để ô tìm món đủ rộng.
+    final actions = !wide && searching
+        ? <Widget>[
+            PopupMenuButton<VoidCallback>(
+              tooltip: 'Thêm',
+              onSelected: (action) => action(),
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: () => _editOrderNote(order),
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon((order.note ?? '').isEmpty ? Icons.note_add_outlined : Icons.sticky_note_2),
+                    title: const Text('Ghi chú đơn'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: () => showKitchenHistory(context, order),
+                  child: const ListTile(
+                      contentPadding: EdgeInsets.zero, leading: Icon(Icons.history), title: Text('Lịch sử báo bếp')),
+                ),
+                PopupMenuItem(
+                  value: _order.refresh,
+                  child: const ListTile(contentPadding: EdgeInsets.zero, leading: Icon(Icons.refresh), title: Text('Tải lại')),
+                ),
+              ],
+            ),
+            const AppMenuButton(),
+          ]
+        : <Widget>[
       if (detail.isActive)
         IconButton(
           tooltip: 'Ghi chú đơn',
@@ -248,11 +314,13 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
           onPressed: _busy > 0 ? null : () => _printBill(detail),
         ),
       IconButton(tooltip: 'Tải lại', icon: const Icon(Icons.refresh), onPressed: _order.refresh),
+      const AppMenuButton(),
     ];
 
     // Đơn đã đóng: chỉ xem lại món + thanh toán.
     if (!showMenu) {
       return Scaffold(
+        endDrawer: const AppDrawer(current: AppPage.order),
         appBar: AppBar(title: appBarTitle, actions: actions, bottom: progress),
         body: orderPanel,
         bottomNavigationBar: summary,
@@ -261,6 +329,7 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
 
     if (wide) {
       return Scaffold(
+        endDrawer: const AppDrawer(current: AppPage.order),
         appBar: AppBar(title: appBarTitle, actions: actions, bottom: progress),
         body: Row(
           children: [
@@ -293,6 +362,7 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
+        endDrawer: const AppDrawer(current: AppPage.order),
         appBar: AppBar(
           title: appBarTitle,
           actions: actions,
@@ -311,6 +381,55 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
         ),
         body: TabBarView(children: [menu, orderPanel]),
         bottomNavigationBar: summary,
+      ),
+    );
+  }
+}
+
+/// Ô tìm món trên thanh tiêu đề (không cần gõ dấu: "ca phe sua" ra "Cà phê sữa").
+class _SearchField extends StatelessWidget {
+  const _SearchField({required this.controller, required this.focusNode, required this.onChanged, required this.hint});
+
+  final String hint;
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: 44,
+      child: ListenableBuilder(
+        listenable: controller,
+        builder: (context, _) => TextField(
+          controller: controller,
+          focusNode: focusNode,
+          autofocus: false,
+          textInputAction: TextInputAction.search,
+          onChanged: onChanged,
+          style: Theme.of(context).textTheme.bodyLarge,
+          decoration: InputDecoration(
+            hintText: hint,
+            isDense: true,
+            filled: true,
+            fillColor: scheme.surfaceContainerHigh,
+            contentPadding: const EdgeInsets.symmetric(vertical: 10),
+            prefixIcon: const Icon(Icons.search, size: 20),
+            suffixIcon: controller.text.isEmpty
+                ? null
+                : IconButton(
+                    tooltip: 'Xoá',
+                    icon: const Icon(Icons.clear, size: 20),
+                    onPressed: () {
+                      controller.clear();
+                      onChanged('');
+                    },
+                  ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide.none),
+          ),
+        ),
       ),
     );
   }

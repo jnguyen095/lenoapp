@@ -117,3 +117,8 @@ class OrderController extends AutoDisposeFamilyAsyncNotifier<OrderDetail, int> {
 final kitchenHistoryProvider = FutureProvider.autoDispose.family<List<KitchenSlip>, int>(
   (ref, orderId) => ref.watch(posRepositoryProvider).kitchenHistory(orderId),
 );
+
+/// Lịch sử đơn hàng hôm nay của người đang đăng nhập.
+final orderHistoryProvider = FutureProvider.autoDispose<OrderHistory>(
+  (ref) => ref.watch(posRepositoryProvider).orderHistory(),
+);

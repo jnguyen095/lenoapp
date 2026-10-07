@@ -5,6 +5,7 @@ import '../../models/models.dart';
 import '../../printing/print_settings.dart';
 import '../../state/pos.dart';
 import '../../state/printing.dart';
+import '../widgets/app_drawer.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/print_feedback.dart';
 import 'printer_edit_screen.dart';
@@ -23,7 +24,8 @@ class PrinterSettingsScreen extends ConsumerWidget {
     final controller = ref.read(printSettingsProvider.notifier);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Cài đặt máy in')),
+      appBar: AppBar(title: const Text('Cài đặt máy in'), actions: const [AppMenuButton()]),
+      endDrawer: const AppDrawer(current: AppPage.printers),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _edit(context),
         icon: const Icon(Icons.add),
@@ -82,30 +84,6 @@ class PrinterSettingsScreen extends ConsumerWidget {
                 ),
                 const _SectionTitle('Máy in theo danh mục'),
                 _CategoryRouting(settings: settings),
-                const _SectionTitle('Thông tin trên hóa đơn'),
-                Card(
-                  child: Column(
-                    children: [
-                      _TextSettingTile(
-                        label: 'Tên quán',
-                        value: settings.shopName,
-                        onSaved: (v) => controller.save(settings.copyWith(shopName: v)),
-                      ),
-                      const Divider(height: 1),
-                      _TextSettingTile(
-                        label: 'Địa chỉ',
-                        value: settings.shopAddress,
-                        onSaved: (v) => controller.save(settings.copyWith(shopAddress: v)),
-                      ),
-                      const Divider(height: 1),
-                      _TextSettingTile(
-                        label: 'Lời cảm ơn cuối hóa đơn',
-                        value: settings.footer,
-                        onSaved: (v) => controller.save(settings.copyWith(footer: v)),
-                      ),
-                    ],
-                  ),
-                ),
                 const SizedBox(height: 12),
                 Text(
                   'Cài đặt này lưu trên máy này. Mỗi máy tính bảng cần tự cài máy in của mình.',
@@ -225,23 +203,3 @@ class _CategoryRouting extends ConsumerWidget {
   }
 }
 
-class _TextSettingTile extends StatelessWidget {
-  const _TextSettingTile({required this.label, required this.value, required this.onSaved});
-
-  final String label;
-  final String value;
-  final ValueChanged<String> onSaved;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      title: Text(label),
-      subtitle: Text(value.isEmpty ? '(trống)' : value),
-      trailing: const Icon(Icons.edit_outlined),
-      onTap: () async {
-        final v = await showNoteDialog(context, title: label, initial: value, quick: false);
-        if (v != null) onSaved(v);
-      },
-    );
-  }
-}
