@@ -59,4 +59,22 @@ void main() {
     expect(detail.activeItemCount, 3);
     expect(detail.payment, isNull);
   });
+
+  test('OrderHistory sorts orders by created time, newest first', () {
+    Map<String, dynamic> o(int id, String created, String status) => {
+          'id': id, 'order_no': 'ORD$id', 'status': status, 'table_name': 'Bàn $id',
+          'total_amount': 10000, 'item_count': 1, 'created_at': created,
+        };
+    final h = OrderHistory.fromJson({
+      'date': '2026-10-07',
+      'summary': {'paid_count': 0, 'paid_total': 0, 'open_count': 3, 'open_total': 30000},
+      'orders': [
+        o(5, '2026-10-07 09:00:00', 'PAID'),
+        o(7, '2026-10-07 21:56:00', 'OPEN'),
+        o(6, '2026-10-07 21:17:00', 'OPEN'),
+      ],
+    });
+    expect(h.orders.map((x) => x.id), [7, 6, 5]);
+    expect(h.byMethod, isEmpty); // máy chủ cũ chưa trả by_method
+  });
 }

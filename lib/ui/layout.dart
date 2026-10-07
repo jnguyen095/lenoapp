@@ -24,13 +24,13 @@ class Layout {
   SliverGridDelegate get tableGrid => isTablet
       ? SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 6,
-          mainAxisExtent: 108,
+          mainAxisExtent: 104,
           crossAxisSpacing: gridSpacing,
           mainAxisSpacing: gridSpacing,
         )
       : SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: 180,
-          mainAxisExtent: 116,
+          maxCrossAxisExtent: 130,
+          mainAxisExtent: 100,
           crossAxisSpacing: gridSpacing,
           mainAxisSpacing: gridSpacing,
         );

@@ -4,7 +4,8 @@ import '../../core/format.dart';
 import '../../models/models.dart';
 
 /// Ô bàn trên sơ đồ — màu theo trạng thái, giống web (Trống / Đang phục vụ / Chờ thanh toán).
-/// Nội dung canh giữa; ô nhỏ hoặc chữ hệ thống lớn thì tự thu nhỏ thay vì tràn.
+/// Chỉ hiện tên bàn và tổng tiền (khi có khách), canh giữa; trạng thái phân biệt bằng màu ô.
+/// Ô nhỏ hoặc chữ hệ thống lớn thì tự thu nhỏ thay vì tràn.
 class TableCard extends StatelessWidget {
   const TableCard({super.key, required this.table, this.onTap, this.onLongPress});
 
@@ -46,44 +47,32 @@ class TableCard extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      // Chỉ tên bàn (to, chữ thường) + tổng tiền khi có khách — trạng thái nhìn theo màu ô; chỉ bàn Mang đi có biểu tượng.
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(table.isTakeaway ? Icons.takeout_dining : Icons.table_restaurant, size: 16, color: fg),
-                          const SizedBox(width: 4),
+                          if (table.isTakeaway) ...[
+                            Icon(Icons.takeout_dining, size: 20, color: fg),
+                            const SizedBox(width: 6),
+                          ],
                           Text(
                             table.name,
-                            style: theme.textTheme.titleSmall?.copyWith(color: fg, fontWeight: FontWeight.bold),
+                            style: theme.textTheme.titleLarge?.copyWith(color: fg, fontWeight: FontWeight.w400),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
                       if (busy) ...[
+                        const SizedBox(height: 2),
                         Text(
                           formatMoney(order.totalAmount),
-                          style: theme.textTheme.titleMedium?.copyWith(color: fg, fontWeight: FontWeight.w700),
+                          style: theme.textTheme.titleSmall?.copyWith(color: fg, fontWeight: FontWeight.w400),
                         ),
-                      ] else
-                        Text(
-                          table.isTakeaway ? 'Bấm để tạo đơn' : '${table.capacity} chỗ',
-                          style: theme.textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
-                        ),
-                      const SizedBox(height: 2),
-                      Text(
-                        Status.tableLabel(table.status),
-                        style: theme.textTheme.labelSmall?.copyWith(color: fg, fontWeight: FontWeight.w600),
-                      ),
+                      ],
                     ],
                   ),
                 ),
               ),
             ),
-            if ((table.note ?? '').isNotEmpty)
-              Positioned(
-                top: 4,
-                right: 4,
-                child: Tooltip(message: table.note!, child: Icon(Icons.sticky_note_2_outlined, size: 14, color: fg)),
-              ),
           ],
         ),
       ),

@@ -520,7 +520,12 @@ class OrderHistory {
     final s = j['summary'] as Map<String, dynamic>;
     return OrderHistory(
       date: j['date'] as String,
-      orders: (j['orders'] as List).map((o) => HistoryOrder.fromJson(o as Map<String, dynamic>)).toList(growable: false),
+      // Giờ tạo mới nhất lên đầu (sắp lại ở máy, kể cả khi máy chủ cũ trả theo thứ tự khác).
+      orders: (j['orders'] as List).map((o) => HistoryOrder.fromJson(o as Map<String, dynamic>)).toList()
+        ..sort((a, b) {
+          final byTime = (b.createdAt ?? '').compareTo(a.createdAt ?? '');
+          return byTime != 0 ? byTime : b.id.compareTo(a.id);
+        }),
       paidCount: _int(s['paid_count']),
       paidTotal: _money(s['paid_total']),
       openCount: _int(s['open_count']),

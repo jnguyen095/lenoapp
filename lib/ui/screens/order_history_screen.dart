@@ -233,9 +233,11 @@ class _OrderTile extends StatelessWidget {
       Status.cancelled => (Icons.cancel_outlined, scheme.error),
       _ => (Icons.room_service, const Color(0xFFEF6C00)),
     };
-    final time = formatTime(order.isPaid ? order.paidAt : order.createdAt).split(' ').first;
+    String hhmm(String? t) => formatTime(t).split(' ').first;
+    // Luôn hiện giờ mở đơn (danh sách sắp theo giờ này); đơn đã trả thêm giờ thanh toán.
     final details = [
-      '${order.isPaid ? 'Trả lúc' : 'Mở lúc'} $time',
+      'Mở lúc ${hhmm(order.createdAt)}',
+      if (order.isPaid && order.paidAt != null) 'trả ${hhmm(order.paidAt)}',
       '${order.itemCount} món',
       ?order.methodLabel,
     ].join(' · ');

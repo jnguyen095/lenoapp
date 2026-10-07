@@ -135,7 +135,7 @@ class _ItemRow extends StatelessWidget {
       child: Text('$index', style: theme.textTheme.labelMedium),
     );
     final name = Text(item.productName,
-        style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600).merge(struck));
+        style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500).merge(struck));
     final note = (item.note ?? '').isEmpty
         ? null
         : Text(item.note!, style: theme.textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic, color: scheme.tertiary));
@@ -331,7 +331,7 @@ class OrderSummaryBar extends StatelessWidget {
                   const Spacer(),
                   Text(
                     formatMoney(order.totalAmount),
-                    style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                    style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.primary),
                   ),
                 ],
               ),
@@ -461,7 +461,7 @@ class PendingBadge extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             '$count chưa báo bếp',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -480,7 +480,7 @@ class _PendingTag extends StatelessWidget {
       decoration: BoxDecoration(color: pendingColor, borderRadius: BorderRadius.circular(6)),
       child: Text(
         'Chưa báo',
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w600),
       ),
     );
   }

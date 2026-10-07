@@ -20,8 +20,8 @@ void main() {
     )));
 
     expect(find.text('Bàn 1'), findsOneWidget);
-    expect(find.text('Trống'), findsOneWidget);
-    expect(find.text('4 chỗ'), findsOneWidget);
+    expect(find.text('Trống'), findsNothing); // trạng thái chỉ thể hiện bằng màu
+    expect(find.text('4 chỗ'), findsNothing);
 
     await tester.tap(find.byType(TableCard));
     expect(tapped, isTrue);
@@ -37,7 +37,7 @@ void main() {
     )));
 
     expect(find.text('58.000'), findsOneWidget);
-    expect(find.text('Đang phục vụ'), findsOneWidget);
-    expect(find.byIcon(Icons.sticky_note_2_outlined), findsOneWidget);
+    expect(find.text('Đang phục vụ'), findsNothing);
+    expect(find.byIcon(Icons.sticky_note_2_outlined), findsNothing); // chỉ bàn Mang đi có biểu tượng
   });
 }
