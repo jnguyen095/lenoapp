@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Máy in USB (lớp 7). Khớp ở cấp thiết bị hoặc cấp interface. -->
+<resources>
+    <usb-device class="7" />
+</resources>
