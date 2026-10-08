@@ -42,6 +42,13 @@ const sizes = {
   'tablet_landscape': Size(1280, 800),
 };
 
+/// yymmdd hôm nay — số đơn giả giống định dạng máy chủ (ORDyymmdd-xxxxx).
+String _ymd() {
+  final t = DateTime.now();
+  String two(int n) => n.toString().padLeft(2, '0');
+  return '${two(t.year % 100)}${two(t.month)}${two(t.day)}';
+}
+
 String _ago(int minutes) {
   final t = DateTime.now().subtract(Duration(minutes: minutes));
   String two(int n) => n.toString().padLeft(2, '0');
@@ -106,7 +113,7 @@ OrderDetail order({bool paid = false}) {
   final total = items.fold<double>(0, (s, i) => s + i.amount);
   return OrderDetail(
     order: Order(
-      id: 83, orderNo: 'ORD261007-0192B', orderType: 'DINE_IN', status: paid ? 'PAID' : 'OPEN', note: 'Khách VIP',
+      id: 83, orderNo: 'ORD${_ymd()}-0192B', orderType: 'DINE_IN', status: paid ? 'PAID' : 'OPEN', note: 'Khách VIP',
       tableId: 3, tableName: 'Bàn 3', tableNote: 'Gần cửa sổ', createdByName: 'Nguyễn Thị Lan', subtotal: total,
       discountAmount: 0, vatAmount: 0, totalAmount: total, createdAt: _ago(27), paidAt: paid ? _ago(0) : null,
     ),
@@ -143,10 +150,10 @@ class FakeRepo extends PosRepository {
           MethodTotal(method: 'QR', label: 'QR Pay', count: 0, total: 0),
         ],
         orders: [
-          HistoryOrder(id: 83, orderNo: 'ORD261007-0192B', status: 'OPEN', tableName: 'Bàn 3', totalAmount: 175000, itemCount: 7, createdAt: _ago(27)),
-          HistoryOrder(id: 82, orderNo: 'ORD261007-A11F2', status: 'PAID', tableName: 'Mang đi', totalAmount: 38000, itemCount: 2, methodLabel: 'Chuyển khoản', createdAt: _ago(60), paidAt: _ago(55)),
-          HistoryOrder(id: 81, orderNo: 'ORD261007-77C01', status: 'OPEN', tableName: 'Bàn 8', totalAmount: 114000, itemCount: 5, createdAt: _ago(80)),
-          HistoryOrder(id: 80, orderNo: 'ORD261007-0093D', status: 'PAID', tableName: 'Bàn 5', totalAmount: 175000, itemCount: 6, methodLabel: 'Tiền mặt', createdAt: _ago(140), paidAt: _ago(95)),
+          HistoryOrder(id: 83, orderNo: 'ORD${_ymd()}-0192B', status: 'OPEN', tableName: 'Bàn 3', totalAmount: 175000, itemCount: 7, createdAt: _ago(27)),
+          HistoryOrder(id: 82, orderNo: 'ORD${_ymd()}-A11F2', status: 'PAID', tableName: 'Mang đi', totalAmount: 38000, itemCount: 2, methodLabel: 'Chuyển khoản', createdAt: _ago(60), paidAt: _ago(55)),
+          HistoryOrder(id: 81, orderNo: 'ORD${_ymd()}-77C01', status: 'OPEN', tableName: 'Bàn 8', totalAmount: 114000, itemCount: 5, createdAt: _ago(80)),
+          HistoryOrder(id: 80, orderNo: 'ORD${_ymd()}-0093D', status: 'PAID', tableName: 'Bàn 5', totalAmount: 175000, itemCount: 6, methodLabel: 'Tiền mặt', createdAt: _ago(140), paidAt: _ago(95)),
         ],
       );
 
@@ -189,7 +196,7 @@ class FakeAuth extends AuthController {
       );
 }
 
-final printSettings = const PrintSettings()
+final printSettings = const PrintSettings(shopPhone: '0974 749 277')
     .upsertPrinter(const PrinterConfig(id: 'bar', name: 'Quầy bar', host: '192.168.1.101', categoryIds: {1, 2, 3}))
     .upsertPrinter(const PrinterConfig(id: 'bep', name: 'Bếp', host: '192.168.1.102', categoryIds: {4}, kitchenDefault: true))
     .upsertPrinter(const PrinterConfig(id: 'tn', name: 'Thu ngân', host: '192.168.1.100', paper: PaperWidth.mm80, receipts: true))

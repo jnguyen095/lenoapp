@@ -23,7 +23,6 @@ class Tickets {
     final lines = <TicketLine>[
       const TicketText('PHIẾU BẾP', align: TextAlign.center, scale: 1.2, bold: true),
       if (station != null) TicketText(station, align: TextAlign.center),
-      if ((slip.staff ?? '').isNotEmpty) TicketText('Nhân viên: ${slip.staff}', align: TextAlign.center),
       const TicketDivider(),
       TicketBoxSplit(order.tableId == null ? 'Mang đi' : order.tableName, [
         'Số HĐ: ${order.orderNo}',
@@ -71,15 +70,19 @@ class Tickets {
 
     return Ticket([
       if (settings.shopName.isNotEmpty) TicketText(settings.shopName, align: TextAlign.center, scale: 1.4, bold: true),
-      if (settings.shopAddress.isNotEmpty) TicketText(settings.shopAddress, align: TextAlign.center),
-      if (settings.shopPhone.isNotEmpty) TicketText('ĐT: ${settings.shopPhone}', align: TextAlign.center),
+      // Địa chỉ - số điện thoại trên cùng một dòng (có cái nào in cái đó).
+      if (settings.shopAddress.isNotEmpty || settings.shopPhone.isNotEmpty)
+        TicketText(
+          [settings.shopAddress, settings.shopPhone].where((s) => s.isNotEmpty).join(' - '),
+          align: TextAlign.center,
+        ),
       TicketText(paid ? 'PHIẾU TÍNH TIỀN' : 'PHIẾU TẠM TÍNH', align: TextAlign.center, scale: 1.2, bold: true),
       if ((order.createdByName ?? '').isNotEmpty)
-        TicketText('Nhân viên: ${order.createdByName}', align: TextAlign.center),
+        TicketText('NVBH: ${order.createdByName}', align: TextAlign.center),
       const TicketDivider(),
       // Trái (30): tên bàn trong khung bo góc — phải (60): Số HĐ + Thời gian.
       TicketBoxSplit(order.tableId == null ? 'Mang đi' : order.tableName, [
-        paid ? 'Số HĐ: ${order.orderNo}' : 'Mã đơn: ${order.orderNo}',
+        'Số HĐ: ${order.orderNo}',
         'Thời gian: ${formatDateTime(paid ? order.paidAt : null)}',
       ], note: !paid && (order.note ?? '').isNotEmpty ? 'Ghi chú: ${order.note}' : null),
       const TicketDivider(),

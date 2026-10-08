@@ -142,7 +142,7 @@ class TicketRenderer {
           final usable = _contentWidth - gap;
           final leftW = usable * line.leftFlex / (line.leftFlex + line.rightFlex);
           final rightW = usable - leftW;
-          final box = _painter(line.boxText, scale: line.boxScale, bold: true, align: TextAlign.center)
+          final box = _painter(line.boxText, scale: line.boxScale, bold: false, align: TextAlign.center)
             ..layout(maxWidth: leftW - hPad * 2);
           final boxW = (box.width + hPad * 2).clamp(0.0, leftW);
           final boxH = box.height + vPad * 2;
