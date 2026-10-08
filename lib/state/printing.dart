@@ -6,6 +6,7 @@ import '../printing/print_settings.dart';
 import '../printing/printer_service.dart';
 import '../printing/ticket.dart';
 import '../printing/tickets.dart';
+import 'auth.dart';
 import 'pos.dart';
 
 const _settingsKey = 'print_settings';
@@ -109,7 +110,9 @@ class PrintActions {
       report.notConfigured = true;
       return report;
     }
-    final ticket = Tickets.bill(detail, settings);
+    // Tài khoản nhận chuyển khoản lấy từ máy chủ lúc đăng nhập (Cài đặt trên web).
+    final bankQr = _ref.read(authProvider).valueOrNull?.settings.bankQr;
+    final ticket = Tickets.bill(detail, settings, bankQr: bankQr);
     await Future.wait([for (final p in printers) _run(report, p, ticket)]);
     return report;
   }

@@ -43,17 +43,54 @@ class User {
 }
 
 class ShopSettings {
-  const ShopSettings({required this.siteName, required this.vatPercent, required this.takeawayEnabled});
+  const ShopSettings({
+    required this.siteName,
+    required this.vatPercent,
+    required this.takeawayEnabled,
+    this.bankQr,
+  });
 
   factory ShopSettings.fromJson(Map<String, dynamic> j) => ShopSettings(
         siteName: (j['site_name'] as String?) ?? 'Leno',
         vatPercent: _money(j['vat_percent']),
         takeawayEnabled: j['takeaway_enabled'] == true,
+        bankQr: j['bank_qr'] is Map<String, dynamic> ? BankQr.fromJson(j['bank_qr'] as Map<String, dynamic>) : null,
       );
 
   final String siteName;
   final double vatPercent;
   final bool takeawayEnabled;
+
+  /// Tài khoản nhận chuyển khoản (Cài đặt trên web) — null khi máy chủ chưa có tính năng này.
+  final BankQr? bankQr;
+}
+
+/// Tài khoản nhận chuyển khoản để in mã VietQR trên phiếu tạm tính.
+class BankQr {
+  const BankQr({
+    required this.enabled,
+    required this.bin,
+    required this.bankName,
+    required this.accountNo,
+    this.accountName = '',
+  });
+
+  factory BankQr.fromJson(Map<String, dynamic> j) => BankQr(
+        enabled: j['enabled'] == true,
+        bin: (j['bin'] as String?) ?? '',
+        bankName: (j['bank_name'] as String?) ?? '',
+        accountNo: (j['account_no'] as String?) ?? '',
+        accountName: (j['account_name'] as String?) ?? '',
+      );
+
+  /// Bật in QR và đã có đủ ngân hàng + số tài khoản.
+  final bool enabled;
+
+  /// Mã BIN ngân hàng của NAPAS, vd 970415 = VietinBank.
+  final String bin;
+  final String bankName;
+  final String accountNo;
+  final String accountName;
 }
 
 /// Trạng thái bàn/đơn giống web.

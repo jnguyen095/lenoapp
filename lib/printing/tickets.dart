@@ -4,6 +4,7 @@ import '../core/format.dart';
 import '../models/models.dart';
 import 'print_settings.dart';
 import 'ticket.dart';
+import 'vietqr.dart';
 
 /// Mẫu phiếu in — cùng nội dung với mẫu K80 trên web (views/orders/*.php).
 class Tickets {
@@ -56,10 +57,12 @@ class Tickets {
     return Ticket(lines);
   }
 
-  /// Phiếu tạm tính (đơn đang mở) hoặc hóa đơn bán hàng (đơn đã thanh toán).
-  static Ticket bill(OrderDetail detail, PrintSettings settings) {
+  /// Phiếu tạm tính (đơn đang mở) hoặc phiếu tính tiền (đơn đã thanh toán).
+  /// [bankQr] bật thì phiếu tạm tính in mã VietQR (đúng số tiền, nội dung = số HĐ) dưới TỔNG CỘNG.
+  static Ticket bill(OrderDetail detail, PrintSettings settings, {BankQr? bankQr}) {
     final order = detail.order;
     final paid = order.status == Status.paid;
+    final showQr = !paid && bankQr != null && bankQr.enabled && order.totalAmount > 0;
     final items = detail.items.where((i) => !i.isCancelled);
     final payment = detail.payment;
     String money(double v) => formatMoney(v, withUnit: false);
@@ -100,6 +103,18 @@ class Tickets {
       TicketRow('Chiết khấu', order.discountAmount > 0 ? '-${money(order.discountAmount)}' : '0'),
       if (order.vatAmount > 0) TicketRow('VAT', money(order.vatAmount)),
       TicketRow('TỔNG CỘNG', money(order.totalAmount), bold: true),
+      if (showQr) ...[
+        const TicketSpace(0.4),
+        TicketQr(buildVietQr(
+          bankBin: bankQr.bin,
+          accountNo: bankQr.accountNo,
+          amount: order.totalAmount.round(),
+          purpose: order.orderNo,
+        )),
+        const TicketText('Quét mã để chuyển khoản', align: TextAlign.center, bold: true),
+        TicketText('${bankQr.bankName} - ${bankQr.accountNo}', align: TextAlign.center),
+        if (bankQr.accountName.isNotEmpty) TicketText(bankQr.accountName, align: TextAlign.center),
+      ],
       if (paid && payment != null) TicketRow('Hình thức TT', payment.methodLabel),
       const TicketDivider(),
       TicketText(

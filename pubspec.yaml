@@ -13,6 +13,7 @@ dependencies:
   flutter_riverpod: ^2.6.1
   flutter_secure_storage: ^9.2.4
   shared_preferences: ^2.3.3
+  qr: ^4.0.0
 
 dev_dependencies:
   flutter_test:

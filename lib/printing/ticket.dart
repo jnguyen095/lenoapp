@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/painting.dart';
+import 'package:qr/qr.dart';
 
 /// Nội dung một phiếu in, dựng từ các dòng đơn giản rồi vẽ thành ảnh đúng khổ giấy.
 sealed class TicketLine {
@@ -58,6 +59,14 @@ class TicketColumns extends TicketLine {
   final List<TextAlign> aligns;
   final double scale;
   final bool bold;
+}
+
+/// Mã QR canh giữa, cạnh = [widthFraction] bề rộng giấy (vd mã VietQR chuyển khoản).
+class TicketQr extends TicketLine {
+  const TicketQr(this.data, {this.widthFraction = 0.55});
+
+  final String data;
+  final double widthFraction;
 }
 
 class TicketDivider extends TicketLine {
@@ -193,6 +202,30 @@ class TicketRenderer {
               for (var i = 0; i < painters.length; i++) {
                 painters[i].paint(c, Offset(x, top));
                 x += widths[i] + gap;
+              }
+            },
+          ));
+        case TicketQr():
+          final qr = QrImage(QrCode(payload: QrPayload.fromString(line.data), errorCorrectLevel: QrErrorCorrectLevel.medium));
+          const quiet = 4; // vùng trắng quanh mã (4 ô) theo chuẩn QR, giúp máy quét nhận nhanh
+          final cells = qr.moduleCount + quiet * 2;
+          // Mỗi ô là số nguyên điểm in để cạnh ô sắc nét trên máy in nhiệt.
+          final cell = (widthDots * line.widthFraction / cells).floorToDouble().clamp(2.0, 20.0);
+          final side = cell * cells;
+          ops.add((
+            side,
+            (c, top) {
+              final left = ((widthDots - side) / 2).floorToDouble();
+              final paint = Paint()..color = _black;
+              for (var y = 0; y < qr.moduleCount; y++) {
+                for (var x = 0; x < qr.moduleCount; x++) {
+                  if (qr.isDark(y, x)) {
+                    c.drawRect(
+                      Rect.fromLTWH(left + (x + quiet) * cell, top + (y + quiet) * cell, cell, cell),
+                      paint,
+                    );
+                  }
+                }
               }
             },
           ));
