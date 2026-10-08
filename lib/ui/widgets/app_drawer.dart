@@ -123,10 +123,14 @@ class AppDrawer extends ConsumerWidget {
               leading: Icon(Icons.logout, color: scheme.error),
               title: Text('Đăng xuất', style: TextStyle(color: scheme.error)),
               onTap: () async {
-                Navigator.of(context).pop();
-                if (await confirmDialog(context, title: 'Đăng xuất khỏi máy này?', confirmLabel: 'Đăng xuất')) {
-                  await ref.read(authProvider.notifier).logout();
-                }
+                // Lấy sẵn trước khi chờ hộp thoại: menu có thể đã đóng (bị huỷ) lúc người dùng bấm xác nhận,
+                // khi đó không được dùng ref/context của menu nữa.
+                final auth = ref.read(authProvider.notifier);
+                final navigator = Navigator.of(context);
+                final ok = await confirmDialog(context, title: 'Đăng xuất khỏi máy này?', confirmLabel: 'Đăng xuất');
+                if (!ok) return;
+                if (navigator.canPop()) navigator.pop(); // đóng menu
+                await auth.logout();
               },
             ),
             const SizedBox(height: 8),

@@ -14,6 +14,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:leno_pos/app.dart';
 import 'package:leno_pos/core/api_client.dart';
 import 'package:leno_pos/data/pos_repository.dart';
@@ -25,6 +26,7 @@ import 'package:leno_pos/printing/usb_printer.dart';
 import 'package:leno_pos/state/auth.dart';
 import 'package:leno_pos/state/printing.dart';
 import 'package:leno_pos/ui/screens/home_screen.dart';
+import 'package:leno_pos/ui/screens/login_screen.dart';
 import 'package:leno_pos/ui/screens/order_history_screen.dart';
 import 'package:leno_pos/ui/screens/order_screen.dart';
 import 'package:leno_pos/ui/screens/printer_edit_screen.dart';
@@ -314,6 +316,19 @@ void main() {
     await shoot(tester, 'history_phone', sizes['phone']!, const OrderHistoryScreen());
     await shoot(tester, 'drawer_history_phone', sizes['phone']!, const OrderHistoryScreen(),
         interact: () => tester.tap(find.byIcon(Icons.menu)));
+    addTearDown(tester.view.reset);
+  });
+
+  testWidgets('login', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    Future<void> loadLogo() async {
+      await tester.runAsync(() => precacheImage(
+          const AssetImage('assets/images/leno-logo.jpg'), tester.element(find.byType(LoginScreen))));
+      await tester.pump();
+    }
+
+    await shoot(tester, 'login_tablet_landscape', sizes['tablet_landscape']!, const LoginScreen(), interact: loadLogo);
+    await shoot(tester, 'login_phone', sizes['phone']!, const LoginScreen(), interact: loadLogo);
     addTearDown(tester.view.reset);
   });
 

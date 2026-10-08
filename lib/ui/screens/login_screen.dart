@@ -94,9 +94,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Center(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(24),
-                          child: Image.asset('assets/images/leno-icon.png', width: 112, height: 112),
+                        // Logo tròn trên nền trắng -> cắt tròn để không lộ góc trắng.
+                        child: ClipOval(
+                          child: Image.asset('assets/images/leno-logo.jpg', width: 128, height: 128, fit: BoxFit.cover),
                         ),
                       ),
                       const SizedBox(height: 16),

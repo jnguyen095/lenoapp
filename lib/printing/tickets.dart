@@ -9,43 +9,49 @@ import 'ticket.dart';
 class Tickets {
   Tickets._();
 
-  static String _tableLine(Order order) => order.tableId == null ? 'MANG ĐI' : 'Bàn: ${order.tableName}';
-
   /// Phiếu bếp cho phần vừa báo (đã tách theo máy in). [station] = tên máy in, vd "Quầy bar".
   static Ticket kitchen(KitchenSlip slip, Order order, {String? station}) {
+    // Cùng bố cục với phiếu tính tiền: khung tên bàn | Số HĐ + Thời gian, bảng món có tiêu đề cột,
+    // ghi chú món trong ngoặc sau tên món.
+    const flex = [80.0, 20.0];
+    const aligns = [TextAlign.left, TextAlign.center];
+    const header = TicketColumns(['Tên món', 'SL'], flex: flex, aligns: aligns, bold: true);
+    // Ghi chú món in nghiêng sau tên món, vd: Cà phê sữa đá *(Ít đá)*.
+    TicketColumns row(String name, int qty, {String? note}) =>
+        TicketColumns([name, '$qty'], flex: flex, aligns: aligns, notes: [note, null]);
+
     final lines = <TicketLine>[
-      const TicketText('PHIẾU BẾP', align: TextAlign.center, scale: 1.3, bold: true),
+      const TicketText('PHIẾU BẾP', align: TextAlign.center, scale: 1.2, bold: true),
       if (station != null) TicketText(station, align: TextAlign.center),
+      if ((slip.staff ?? '').isNotEmpty) TicketText('Nhân viên: ${slip.staff}', align: TextAlign.center),
       const TicketDivider(),
-      TicketText(_tableLine(order), scale: 1.5, bold: true),
-      TicketText('Mã đơn: ${order.orderNo}'),
-      TicketText('Giờ: ${formatDateTime(slip.createdAt)} — ${slip.staff ?? ''}'),
-      if ((slip.orderNote ?? '').isNotEmpty) TicketText('Ghi chú: ${slip.orderNote}'),
+      TicketBoxSplit(order.tableId == null ? 'Mang đi' : order.tableName, [
+        'Số HĐ: ${order.orderNo}',
+        'Thời gian: ${formatDateTime(slip.createdAt)}',
+      ], note: (slip.orderNote ?? '').isEmpty ? null : 'Ghi chú: ${slip.orderNote}'),
       const TicketDivider(),
     ];
 
-    void addLines(List<SlipLine> items, {bool showRemovedNote = false}) {
-      for (final l in items) {
-        lines.add(TicketText('${l.qty} x ${l.productName}', scale: 1.25));
-        if ((l.note ?? '').isNotEmpty) {
-          lines.add(TicketText('   » ${l.note}', scale: 1.1, italic: true));
-        } else if (showRemovedNote) {
-          lines.add(const TicketText('   » (bỏ ghi chú)', scale: 1.1, italic: true));
-        }
+    if (slip.send.isNotEmpty) {
+      lines.add(header);
+      for (final l in slip.send) {
+        lines.add(row(l.productName, l.qty, note: l.note));
       }
     }
-
-    addLines(slip.send);
     if (slip.changed.isNotEmpty) {
       if (slip.send.isNotEmpty) lines.add(const TicketDivider());
-      lines.add(const TicketText('ĐỔI GHI CHÚ', scale: 1.2, bold: true));
-      addLines(slip.changed, showRemovedNote: true);
+      lines.add(const TicketText('ĐỔI GHI CHÚ', bold: true));
+      lines.add(header);
+      for (final l in slip.changed) {
+        lines.add(row(l.productName, l.qty, note: (l.note ?? '').isEmpty ? 'bỏ ghi chú' : l.note));
+      }
     }
     if (slip.cancel.isNotEmpty) {
       if (slip.send.isNotEmpty || slip.changed.isNotEmpty) lines.add(const TicketDivider());
-      lines.add(const TicketText('HỦY MÓN', scale: 1.2, bold: true));
+      lines.add(const TicketText('HỦY MÓN', bold: true));
+      lines.add(header);
       for (final l in slip.cancel) {
-        lines.add(TicketText('${l.qty} x ${l.productName}', scale: 1.25));
+        lines.add(row(l.productName, l.qty));
       }
     }
     return Ticket(lines);
@@ -59,35 +65,39 @@ class Tickets {
     final payment = detail.payment;
     String money(double v) => formatMoney(v, withUnit: false);
 
+    // Bảng món 4 cột: Tên món | Đ.Giá | SL | Tiền.
+    const flex = [46.0, 21.0, 9.0, 24.0];
+    const aligns = [TextAlign.left, TextAlign.right, TextAlign.center, TextAlign.right];
+
     return Ticket([
       if (settings.shopName.isNotEmpty) TicketText(settings.shopName, align: TextAlign.center, scale: 1.4, bold: true),
       if (settings.shopAddress.isNotEmpty) TicketText(settings.shopAddress, align: TextAlign.center),
       if (settings.shopPhone.isNotEmpty) TicketText('ĐT: ${settings.shopPhone}', align: TextAlign.center),
-      TicketText(paid ? 'HÓA ĐƠN BÁN HÀNG' : 'PHIẾU TẠM TÍNH', align: TextAlign.center, bold: true),
+      TicketText(paid ? 'PHIẾU TÍNH TIỀN' : 'PHIẾU TẠM TÍNH', align: TextAlign.center, scale: 1.2, bold: true),
+      if ((order.createdByName ?? '').isNotEmpty)
+        TicketText('Nhân viên: ${order.createdByName}', align: TextAlign.center),
       const TicketDivider(),
-      TicketText(paid ? 'Số HĐ: ${order.orderNo}' : 'Mã đơn: ${order.orderNo}'),
-      TicketText(order.tableId == null ? 'Mang đi' : 'Bàn: ${order.tableName}'),
-      TicketText('Thời gian: ${formatDateTime(paid ? order.paidAt : null)}'),
-      if ((order.createdByName ?? '').isNotEmpty) TicketText('Nhân viên: ${order.createdByName}'),
-      if (!paid && (order.note ?? '').isNotEmpty) TicketText('Ghi chú: ${order.note}'),
+      // Trái (30): tên bàn trong khung bo góc — phải (60): Số HĐ + Thời gian.
+      TicketBoxSplit(order.tableId == null ? 'Mang đi' : order.tableName, [
+        paid ? 'Số HĐ: ${order.orderNo}' : 'Mã đơn: ${order.orderNo}',
+        'Thời gian: ${formatDateTime(paid ? order.paidAt : null)}',
+      ], note: !paid && (order.note ?? '').isNotEmpty ? 'Ghi chú: ${order.note}' : null),
       const TicketDivider(),
-      for (final it in items) ...[
-        TicketText((it.note ?? '').isEmpty || paid ? it.productName : '${it.productName} (${it.note})'),
-        TicketRow('${it.qty} x ${money(it.price)}', money(it.amount)),
-      ],
+      const TicketColumns(['Tên món', 'Đ.Giá', 'SL', 'Tiền'], flex: flex, aligns: aligns, bold: true),
+      for (final it in items)
+        TicketColumns(
+          [it.productName, money(it.price), '${it.qty}', money(it.amount)],
+          // Phiếu tạm tính: ghi chú món in nghiêng sau tên món (hóa đơn đã thanh toán thì không in).
+          notes: [paid ? null : it.note, null, null, null],
+          flex: flex,
+          aligns: aligns,
+        ),
       const TicketDivider(),
       TicketRow('Tạm tính', money(order.subtotal)),
-      if (order.discountAmount > 0) TicketRow('Giảm giá', '-${money(order.discountAmount)}'),
+      TicketRow('Chiết khấu', order.discountAmount > 0 ? '-${money(order.discountAmount)}' : '0'),
       if (order.vatAmount > 0) TicketRow('VAT', money(order.vatAmount)),
-      TicketRow('TỔNG CỘNG', money(order.totalAmount), scale: 1.3, bold: true),
-      if (paid && payment != null) ...[
-        const TicketDivider(),
-        TicketRow('Hình thức TT', payment.methodLabel),
-        if (payment.method == PaymentMethod.cash.code) ...[
-          TicketRow('Khách đưa', money(payment.receivedAmount)),
-          TicketRow('Tiền thối', money(payment.changeAmount)),
-        ],
-      ],
+      TicketRow('TỔNG CỘNG', money(order.totalAmount), bold: true),
+      if (paid && payment != null) TicketRow('Hình thức TT', payment.methodLabel),
       const TicketDivider(),
       TicketText(
         paid ? settings.footer : '-- Phiếu tạm tính, chưa phải hóa đơn --',

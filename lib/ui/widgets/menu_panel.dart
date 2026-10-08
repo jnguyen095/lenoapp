@@ -6,6 +6,7 @@ import '../../models/models.dart';
 import '../../state/auth.dart';
 import '../../state/pos.dart';
 import '../layout.dart';
+import 'order_panel.dart' show pendingColor;
 
 /// Thực đơn để gọi món: lọc danh mục, bấm món để thêm 1, nhấn giữ để chọn số lượng + ghi chú.
 /// Ô tìm món nằm trên thanh tiêu đề của màn hình đơn (nút 🔍) — [query] là chữ đang tìm (không cần dấu).
@@ -207,11 +208,11 @@ class ProductTile extends ConsumerWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
                         decoration: BoxDecoration(
                           color: scheme.surface,
-                          border: Border.all(color: scheme.primary, width: 1.5),
+                          border: Border.all(color: pendingColor, width: 1.5),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text('×$qtyInOrder',
-                            style: theme.textTheme.labelMedium?.copyWith(color: scheme.primary, fontWeight: FontWeight.w600)),
+                            style: theme.textTheme.labelMedium?.copyWith(color: pendingColor, fontWeight: FontWeight.w600)),
                       ),
                     ),
                 ],

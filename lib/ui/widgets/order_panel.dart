@@ -469,19 +469,15 @@ class PendingBadge extends StatelessWidget {
   }
 }
 
-/// Nhãn "Chưa báo" trên dòng món — nền cam chữ trắng.
+/// Nhãn "Chưa báo" trên dòng món — chữ cam, không nền.
 class _PendingTag extends StatelessWidget {
   const _PendingTag();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-      decoration: BoxDecoration(color: pendingColor, borderRadius: BorderRadius.circular(6)),
-      child: Text(
-        'Chưa báo',
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w600),
-      ),
+    return Text(
+      'Chưa báo',
+      style: Theme.of(context).textTheme.labelMedium?.copyWith(color: pendingColor, fontWeight: FontWeight.w600),
     );
   }
 }
