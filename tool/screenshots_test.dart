@@ -17,12 +17,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:leno_pos/app.dart';
 import 'package:leno_pos/core/api_client.dart';
+import 'package:leno_pos/customer_display/customer_display_view.dart';
+import 'package:leno_pos/customer_display/display_models.dart';
 import 'package:leno_pos/data/pos_repository.dart';
 import 'package:leno_pos/models/models.dart';
 import 'package:leno_pos/printing/print_settings.dart';
 import 'package:leno_pos/printing/ticket.dart';
 import 'package:leno_pos/printing/tickets.dart';
 import 'package:leno_pos/printing/usb_printer.dart';
+import 'package:leno_pos/printing/vietqr.dart';
 import 'package:leno_pos/state/auth.dart';
 import 'package:leno_pos/state/printing.dart';
 import 'package:leno_pos/ui/screens/home_screen.dart';
@@ -269,6 +272,7 @@ Future<void> shoot(WidgetTester tester, String name, Size size, Widget home, {Fu
 
 void main() {
   setUpAll(loadFonts);
+  customerDisplayShots();
   tearDown(() {});
 
   for (final e in sizes.entries) {
@@ -381,4 +385,54 @@ void main() {
       }
     });
   });
+}
+
+// ---- Màn hình khách (màn hình phụ) ----
+void customerDisplayShots() {
+  final slideFile = File('assets/images/leno-logo.jpg').absolute.path;
+  final content = DisplayContent(
+    shopName: 'Leno Quán',
+    config: const DisplayConfig(welcomeText: 'Chào mừng quý khách đến với Leno', thanksText: 'Cảm ơn quý khách - Hẹn gặp lại!'),
+    slides: [DisplaySlide(id: 1, url: 'assets/x.jpg', file: slideFile)],
+    version: 'v1',
+  );
+  const lines = [
+    DisplayLine(name: 'Cà phê sữa đá', qty: 2, price: 18000, amount: 36000),
+    DisplayLine(name: 'Trà sữa trân châu đường đen', qty: 1, price: 30000, amount: 30000),
+    DisplayLine(name: 'Khoai tây chiên', qty: 1, price: 25000, amount: 25000),
+    DisplayLine(name: 'Trà đào cam sả', qty: 3, price: 28000, amount: 84000),
+  ];
+  final states = <String, (DisplayContent, DisplaySnapshot)>{
+    'idle_noslides': (content.copyWith(slides: const []), const DisplaySnapshot.idle()),
+    'order': (content, const DisplaySnapshot(state: DisplayState.order, orderId: 1, tableName: 'Bàn 3', lines: lines, subtotal: 175000, total: 175000)),
+    'paying': (
+      content,
+      DisplaySnapshot(
+        state: DisplayState.paying, orderId: 1, tableName: 'Bàn 3', lines: lines, subtotal: 175000, total: 175000,
+        orderNo: 'ORD${_ymd()}-0192B', bankName: 'VietinBank', accountNo: '101874640883', accountName: 'NGUYỄN NHƯ KHANG',
+        qrPayload: buildVietQr(bankBin: '970415', accountNo: '101874640883', amount: 175000, purpose: 'ORD${_ymd()}-0192B'),
+      )
+    ),
+    'thanks': (content, const DisplaySnapshot(state: DisplayState.thanks, orderId: 1, total: 175000, methodLabel: 'Tiền mặt', received: 200000, change: 25000)),
+    'idle_slides': (content, const DisplaySnapshot.idle()),
+  };
+  const displaySizes = {'1280x800': Size(1280, 800), '1024x600': Size(1024, 600), 'portrait': Size(800, 1280)};
+
+  for (final size in displaySizes.entries) {
+    testWidgets('customer display ${size.key}', (tester) async {
+      for (final s in states.entries) {
+        await shoot(tester, 'cd_${s.key}_${size.key}', size.value,
+            Scaffold(body: CustomerDisplayView(content: s.value.$1, snapshot: s.value.$2)),
+            interact: () async {
+          await tester.runAsync(() async {
+            final ctx = tester.element(find.byType(CustomerDisplayView));
+            await precacheImage(FileImage(File(slideFile)), ctx);
+            await precacheImage(const AssetImage('assets/images/leno-logo.jpg'), ctx);
+          });
+          await tester.pump();
+        });
+      }
+      addTearDown(tester.view.reset);
+    });
+  }
 }

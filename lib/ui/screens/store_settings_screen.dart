@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../customer_display/customer_display_controller.dart';
 import '../../printing/print_settings.dart';
 import '../../state/printing.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/dialogs.dart';
+import 'customer_display_preview_screen.dart';
 
 /// Cài đặt cửa hàng: thông tin in trên hóa đơn / phiếu tạm tính và hiện dưới tiêu đề "Sơ đồ bàn".
 /// Lưu trên máy này (cùng chỗ với cài đặt máy in).
@@ -108,9 +110,89 @@ class _StoreFormState extends ConsumerState<_StoreForm> {
             ),
             const SizedBox(height: 12),
             Text('Cài đặt này lưu trên máy này. Mỗi máy tính bảng cần tự cài.', style: theme.textTheme.bodySmall),
+            const SizedBox(height: 28),
+            const _CustomerDisplaySection(),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Màn hình khách (màn hình phụ của máy POS): bật/tắt, trạng thái, tải lại ảnh, xem thử.
+/// Ảnh trình chiếu và tuỳ chọn hiển thị quản lý trên web: Quản trị → Màn hình khách.
+class _CustomerDisplaySection extends ConsumerStatefulWidget {
+  const _CustomerDisplaySection();
+
+  @override
+  ConsumerState<_CustomerDisplaySection> createState() => _CustomerDisplaySectionState();
+}
+
+class _CustomerDisplaySectionState extends ConsumerState<_CustomerDisplaySection> {
+  bool _refreshing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.read(customerDisplayProvider.notifier).refreshStatus());
+  }
+
+  Future<void> _refresh() async {
+    setState(() => _refreshing = true);
+    final c = ref.read(customerDisplayProvider.notifier);
+    await c.refreshStatus();
+    await c.refreshContent();
+    if (!mounted) return;
+    setState(() => _refreshing = false);
+    final s = ref.read(customerDisplayProvider);
+    showMessage(context, s.lastError == null ? 'Đã tải ${s.content.readySlides.length} ảnh và tuỳ chọn mới nhất.' : s.lastError!);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final s = ref.watch(customerDisplayProvider);
+    final c = ref.read(customerDisplayProvider.notifier);
+    final info = s.info;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Màn hình khách', style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary)),
+        const SizedBox(height: 8),
+        Card(
+          child: Column(
+            children: [
+              SwitchListTile(
+                title: const Text('Hiện trên màn hình phụ'),
+                subtitle: Text(info.available
+                    ? '${info.label}${info.showing ? ' · đang hiện' : ''}'
+                    : 'Không tìm thấy màn hình phụ (máy POS 2 màn hình hoặc màn hình HDMI).'),
+                value: s.enabled,
+                onChanged: c.setEnabled,
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: Text('${s.content.readySlides.length} ảnh trình chiếu'),
+                subtitle: Text(s.lastError ?? 'Quản lý ảnh và tuỳ chọn trên web: Quản trị → Màn hình khách. Tự tải lại mỗi 5 phút.'),
+                trailing: _refreshing
+                    ? const SizedBox.square(dimension: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                    : TextButton(onPressed: _refresh, child: const Text('Tải lại')),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.visibility_outlined),
+                title: const Text('Xem thử màn hình khách'),
+                subtitle: const Text('Xem trên máy này: lúc rảnh, gọi món, chuyển khoản, cảm ơn'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context)
+                    .push(MaterialPageRoute<void>(builder: (_) => const CustomerDisplayPreviewScreen())),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

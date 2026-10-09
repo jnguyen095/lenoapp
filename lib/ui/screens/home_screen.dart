@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/format.dart';
+import '../../customer_display/customer_display_controller.dart';
 import '../../models/models.dart';
 import '../../state/auth.dart';
 import '../../state/pos.dart';
@@ -21,6 +22,8 @@ class HomeScreen extends ConsumerWidget {
     final session = ref.watch(authProvider).valueOrNull;
     if (session == null) return const Scaffold(); // đang chuyển về màn hình đăng nhập
     final user = session.user;
+    // Màn hình khách: bật màn hình phụ + tải ảnh trình chiếu (chạy một lần sau khi đăng nhập).
+    WidgetsBinding.instance.addPostFrameCallback((_) => ref.read(customerDisplayProvider.notifier).start());
 
     return Scaffold(
       drawer: const AppDrawer(current: AppPage.home),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
+import '../../customer_display/customer_display_controller.dart';
 import '../../models/models.dart';
 import '../../state/pos.dart';
 import '../../state/printing.dart';
@@ -34,8 +35,22 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
   final _searchCtrl = TextEditingController();
   final _searchFocus = FocusNode();
 
+  // Màn hình khách: lấy sẵn để còn dùng được trong dispose().
+  late final CustomerDisplayController _display = ref.read(customerDisplayProvider.notifier);
+
+  @override
+  void initState() {
+    super.initState();
+    // Đơn mở / thay đổi (thêm, bớt món, máy khác sửa) -> cập nhật màn hình khách.
+    ref.listenManual(orderProvider(widget.orderId), (_, next) {
+      final detail = next.valueOrNull;
+      if (detail != null) Future.microtask(() => _display.showOrder(detail));
+    }, fireImmediately: true);
+  }
+
   @override
   void dispose() {
+    _display.leaveOrder(widget.orderId);
     _searchCtrl.dispose();
     _searchFocus.dispose();
     super.dispose();
@@ -158,11 +173,25 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
       return;
     }
 
-    final input = await showPaymentSheet(context, total: latest.order.totalAmount, title: latest.order.tableName);
-    if (input == null || !mounted) return;
+    // Màn hình khách: bảng thanh toán mở với Tiền mặt; chọn Chuyển khoản/QR thì hiện mã VietQR cho khách.
+    _display.startPaying(latest, PaymentMethod.cash);
+    final input = await showPaymentSheet(
+      context,
+      total: latest.order.totalAmount,
+      title: latest.order.tableName,
+      onMethodChanged: (m) => _display.startPaying(latest, m),
+    );
+    if (input == null || !mounted) {
+      _display.cancelPaying(latest.order.id);
+      return;
+    }
 
     final paid = await _act(() => _order.pay(input.method, receivedAmount: input.received));
-    if (paid == null || !mounted) return;
+    if (paid == null || !mounted) {
+      _display.cancelPaying(latest.order.id);
+      return;
+    }
+    _display.showThanks(paid);
 
     Future<PrintReport> printReceipt() => ref.read(printActionsProvider).bill(paid);
     final settings = await ref.read(printSettingsProvider.future);
@@ -178,7 +207,6 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
   @override
   Widget build(BuildContext context) {
     final orderAsync = ref.watch(orderProvider(widget.orderId));
-
     return orderAsync.when(
       skipLoadingOnRefresh: true,
       loading: () => Scaffold(appBar: AppBar(), body: const Center(child: CircularProgressIndicator())),

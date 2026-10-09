@@ -62,6 +62,20 @@ class ApiClient {
 
   Future<Map<String, dynamic>> delete(String path) => _send(() => _dio.delete<dynamic>(path));
 
+  /// Tải file (vd ảnh trình chiếu) theo đường dẫn tương đối trên máy chủ ("assets/...").
+  Future<List<int>> downloadBytes(String path) async {
+    try {
+      final res = await _dio.get<List<int>>(
+        imageUrl(path)!,
+        options: Options(responseType: ResponseType.bytes, receiveTimeout: const Duration(seconds: 60)),
+      );
+      return res.data ?? const [];
+    } on DioException catch (e) {
+      throw ApiException('Không tải được ảnh $path (${e.response?.statusCode ?? e.type.name}).',
+          statusCode: e.response?.statusCode);
+    }
+  }
+
   Future<Map<String, dynamic>> _send(Future<Response<dynamic>> Function() call) async {
     try {
       final res = await call();

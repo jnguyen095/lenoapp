@@ -61,6 +61,9 @@ class PosRepository {
   Future<OrderDetail> removeItem(int orderId, int itemId) async =>
       OrderDetail.fromJson(await api.delete('orders/$orderId/items/$itemId'));
 
+  /// Ảnh trình chiếu + tuỳ chọn màn hình khách (Quản trị → Màn hình khách trên web).
+  Future<Map<String, dynamic>> displayConfig() => api.get('display/config');
+
   /// Các lần báo bếp của đơn (cả từ web), mới nhất trước.
   Future<List<KitchenSlip>> kitchenHistory(int orderId) async {
     final res = await api.get('orders/$orderId/kitchen-history');

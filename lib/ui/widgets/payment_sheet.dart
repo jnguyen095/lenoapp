@@ -7,15 +7,21 @@ import '../../models/models.dart';
 typedef PaymentInput = ({PaymentMethod method, double received});
 
 /// Chọn hình thức thanh toán; tiền mặt thì nhập tiền khách đưa (có nút gợi ý mệnh giá) và
-/// hiện tiền thối. Trả về null nếu đóng.
-Future<PaymentInput?> showPaymentSheet(BuildContext context, {required double total, required String title}) {
+/// hiện tiền thối. Trả về null nếu đóng. [onMethodChanged] báo mỗi lần chọn hình thức (kể cả lúc mở,
+/// mặc định Tiền mặt) — vd để màn hình khách hiện mã VietQR khi chọn chuyển khoản.
+Future<PaymentInput?> showPaymentSheet(
+  BuildContext context, {
+  required double total,
+  required String title,
+  ValueChanged<PaymentMethod>? onMethodChanged,
+}) {
   return showModalBottomSheet<PaymentInput>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
     builder: (context) => Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: _PaymentSheet(total: total, title: title),
+      child: _PaymentSheet(total: total, title: title, onMethodChanged: onMethodChanged),
     ),
   );
 }
@@ -31,10 +37,11 @@ List<double> suggestedCash(double total) {
 }
 
 class _PaymentSheet extends StatefulWidget {
-  const _PaymentSheet({required this.total, required this.title});
+  const _PaymentSheet({required this.total, required this.title, this.onMethodChanged});
 
   final double total;
   final String title;
+  final ValueChanged<PaymentMethod>? onMethodChanged;
 
   @override
   State<_PaymentSheet> createState() => _PaymentSheetState();
@@ -100,7 +107,10 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                       ChoiceChip(
                         label: Text(m.label),
                         selected: _method == m,
-                        onSelected: (_) => setState(() => _method = m),
+                        onSelected: (_) {
+                          setState(() => _method = m);
+                          widget.onMethodChanged?.call(m);
+                        },
                       ),
                   ],
                 ),
