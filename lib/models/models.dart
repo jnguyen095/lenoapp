@@ -48,14 +48,22 @@ class ShopSettings {
     required this.vatPercent,
     required this.takeawayEnabled,
     this.bankQr,
+    this.receipt = const ReceiptInfo(),
   });
 
-  factory ShopSettings.fromJson(Map<String, dynamic> j) => ShopSettings(
-        siteName: (j['site_name'] as String?) ?? 'Leno',
-        vatPercent: _money(j['vat_percent']),
-        takeawayEnabled: j['takeaway_enabled'] == true,
-        bankQr: j['bank_qr'] is Map<String, dynamic> ? BankQr.fromJson(j['bank_qr'] as Map<String, dynamic>) : null,
-      );
+  factory ShopSettings.fromJson(Map<String, dynamic> j) {
+    final siteName = (j['site_name'] as String?) ?? 'Leno';
+    return ShopSettings(
+      siteName: siteName,
+      vatPercent: _money(j['vat_percent']),
+      takeawayEnabled: j['takeaway_enabled'] == true,
+      bankQr: j['bank_qr'] is Map<String, dynamic> ? BankQr.fromJson(j['bank_qr'] as Map<String, dynamic>) : null,
+      // Máy chủ cũ chưa có "Thông tin in phiếu" -> dùng tên website và lời cảm ơn mặc định.
+      receipt: j['receipt'] is Map<String, dynamic>
+          ? ReceiptInfo.fromJson(j['receipt'] as Map<String, dynamic>)
+          : ReceiptInfo(shopName: siteName),
+    );
+  }
 
   final String siteName;
   final double vatPercent;
@@ -63,6 +71,31 @@ class ShopSettings {
 
   /// Tài khoản nhận chuyển khoản (Cài đặt trên web) — null khi máy chủ chưa có tính năng này.
   final BankQr? bankQr;
+
+  /// Tên quán, địa chỉ, SĐT, lời cảm ơn in trên phiếu (web: Cài đặt → Thông tin in phiếu).
+  final ReceiptInfo receipt;
+}
+
+/// Thông tin cửa hàng in trên phiếu tạm tính / phiếu tính tiền — quản lý chung trên web.
+class ReceiptInfo {
+  const ReceiptInfo({
+    this.shopName = 'Leno',
+    this.address = '',
+    this.phone = '',
+    this.footer = 'Cảm ơn quý khách - Hẹn gặp lại!',
+  });
+
+  factory ReceiptInfo.fromJson(Map<String, dynamic> j) => ReceiptInfo(
+        shopName: (j['shop_name'] as String?) ?? 'Leno',
+        address: (j['address'] as String?) ?? '',
+        phone: (j['phone'] as String?) ?? '',
+        footer: (j['footer'] as String?) ?? '',
+      );
+
+  final String shopName;
+  final String address;
+  final String phone;
+  final String footer;
 }
 
 /// Tài khoản nhận chuyển khoản để in mã VietQR trên phiếu tạm tính.

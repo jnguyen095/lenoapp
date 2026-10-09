@@ -2,119 +2,115 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../customer_display/customer_display_controller.dart';
-import '../../printing/print_settings.dart';
-import '../../state/printing.dart';
+import '../../models/models.dart';
+import '../../state/auth.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/dialogs.dart';
 import 'customer_display_preview_screen.dart';
 
-/// Cài đặt cửa hàng: thông tin in trên hóa đơn / phiếu tạm tính và hiện dưới tiêu đề "Sơ đồ bàn".
-/// Lưu trên máy này (cùng chỗ với cài đặt máy in).
-class StoreSettingsScreen extends ConsumerWidget {
+/// Cài đặt cửa hàng: thông tin in trên phiếu (tên quán, địa chỉ, SĐT, lời cảm ơn) lấy từ web
+/// (Cài đặt → Thông tin in phiếu) — dùng chung cho mọi máy, chỉ xem ở đây. Kèm phần màn hình khách.
+class StoreSettingsScreen extends StatelessWidget {
   const StoreSettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Cài đặt cửa hàng'), actions: const [AppMenuButton()]),
       endDrawer: const AppDrawer(current: AppPage.store),
-      body: ref.watch(printSettingsProvider).when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('$e')),
-            data: (settings) => _StoreForm(settings: settings),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: const [
+              _ReceiptInfoSection(),
+              SizedBox(height: 28),
+              _CustomerDisplaySection(),
+            ],
           ),
+        ),
+      ),
     );
   }
 }
 
-class _StoreForm extends ConsumerStatefulWidget {
-  const _StoreForm({required this.settings});
-
-  final PrintSettings settings;
+/// Thông tin in trên phiếu tạm tính / phiếu tính tiền — sửa trên web, ứng dụng tự tải lại.
+class _ReceiptInfoSection extends ConsumerStatefulWidget {
+  const _ReceiptInfoSection();
 
   @override
-  ConsumerState<_StoreForm> createState() => _StoreFormState();
+  ConsumerState<_ReceiptInfoSection> createState() => _ReceiptInfoSectionState();
 }
 
-class _StoreFormState extends ConsumerState<_StoreForm> {
-  late final _name = TextEditingController(text: widget.settings.shopName);
-  late final _address = TextEditingController(text: widget.settings.shopAddress);
-  late final _phone = TextEditingController(text: widget.settings.shopPhone);
-  late final _footer = TextEditingController(text: widget.settings.footer);
+class _ReceiptInfoSectionState extends ConsumerState<_ReceiptInfoSection> {
+  bool _refreshing = false;
 
-  @override
-  void dispose() {
-    _name.dispose();
-    _address.dispose();
-    _phone.dispose();
-    _footer.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save() async {
-    FocusScope.of(context).unfocus();
-    await ref.read(printSettingsProvider.notifier).change((s) => s.copyWith(
-          shopName: _name.text.trim(),
-          shopAddress: _address.text.trim(),
-          shopPhone: _phone.text.trim(),
-          footer: _footer.text.trim(),
-        ));
-    if (mounted) showMessage(context, 'Đã lưu cài đặt cửa hàng.');
+  Future<void> _refresh() async {
+    setState(() => _refreshing = true);
+    String message = 'Đã tải thông tin mới nhất từ máy chủ.';
+    try {
+      await ref.read(shopSettingsProvider.notifier).refresh();
+    } catch (e) {
+      message = '$e';
+    }
+    if (!mounted) return;
+    setState(() => _refreshing = false);
+    showMessage(context, message);
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    InputDecoration deco(String label, IconData icon, {String? hint, String? helper}) =>
-        InputDecoration(labelText: label, hintText: hint, helperText: helper, prefixIcon: Icon(icon));
+    final receipt = ref.watch(shopSettingsProvider)?.receipt ?? const ReceiptInfo();
 
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 720),
-        child: ListView(
-          padding: const EdgeInsets.all(16),
+    Widget row(IconData icon, String label, String value) => ListTile(
+          leading: Icon(icon),
+          title: Text(label, style: theme.textTheme.bodySmall),
+          subtitle: Text(value.isEmpty ? '(không in)' : value,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: value.isEmpty ? theme.colorScheme.outline : null,
+              )),
+        );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
           children: [
-            Text('Thông tin in trên hóa đơn và phiếu tạm tính', style: theme.textTheme.titleSmall),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _name,
-              maxLength: 60,
-              decoration: deco('Tên quán', Icons.storefront_outlined,
-                  hint: 'Leno', helper: 'Dòng đầu hóa đơn, cũng hiện dưới tiêu đề "Sơ đồ bàn"'),
+            Expanded(
+              child: Text('Thông tin in trên phiếu',
+                  style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary)),
             ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _address,
-              maxLength: 120,
-              decoration: deco('Địa chỉ', Icons.place_outlined, hint: '28 Võ Văn Kiệt, BMT'),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _phone,
-              maxLength: 20,
-              keyboardType: TextInputType.phone,
-              decoration: deco('Số điện thoại', Icons.phone_outlined, helper: 'Để trống nếu không muốn in'),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _footer,
-              maxLength: 120,
-              decoration: deco('Lời cảm ơn cuối hóa đơn', Icons.favorite_border, hint: 'Cảm ơn quý khách - Hẹn gặp lại!'),
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: _save,
-              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
-              icon: const Icon(Icons.check),
-              label: const Text('Lưu'),
-            ),
-            const SizedBox(height: 12),
-            Text('Cài đặt này lưu trên máy này. Mỗi máy tính bảng cần tự cài.', style: theme.textTheme.bodySmall),
-            const SizedBox(height: 28),
-            const _CustomerDisplaySection(),
+            _refreshing
+                ? const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                  )
+                : TextButton.icon(onPressed: _refresh, icon: const Icon(Icons.refresh), label: const Text('Tải lại')),
           ],
         ),
-      ),
+        const SizedBox(height: 4),
+        Card(
+          child: Column(
+            children: [
+              row(Icons.storefront_outlined, 'Tên quán', receipt.shopName),
+              const Divider(height: 1),
+              row(Icons.place_outlined, 'Địa chỉ', receipt.address),
+              const Divider(height: 1),
+              row(Icons.phone_outlined, 'Số điện thoại', receipt.phone),
+              const Divider(height: 1),
+              row(Icons.favorite_border, 'Lời cảm ơn cuối phiếu tính tiền', receipt.footer),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Dùng chung cho mọi máy. Sửa trên web: Cài đặt → Thông tin in phiếu (quyền quản trị). '
+          'Ứng dụng tự cập nhật khi mở ứng dụng và mỗi 5 phút.',
+          style: theme.textTheme.bodySmall,
+        ),
+      ],
     );
   }
 }

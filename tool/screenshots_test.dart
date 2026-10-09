@@ -195,13 +195,15 @@ class FakeAuth extends AuthController {
         token: 't',
         user: User(id: 1, username: 'lan', fullname: 'Nguyễn Thị Lan', role: 'CASHIER', roleLabel: 'Thu ngân',
             canTables: true, canOrders: true),
-        settings: ShopSettings(siteName: 'Leno', vatPercent: 0, takeawayEnabled: true),
+        settings: ShopSettings(siteName: 'Leno', vatPercent: 0, takeawayEnabled: true, receipt: receipt),
       );
 }
 
 const bankQr = BankQr(enabled: true, bin: '970415', bankName: 'VietinBank', accountNo: '101874640883');
 
-final printSettings = const PrintSettings(shopPhone: '0974 749 277')
+const receipt = ReceiptInfo(shopName: 'Leno', address: '28 Võ Văn Kiệt, BMT', phone: '0974 749 277');
+
+final printSettings = const PrintSettings()
     .upsertPrinter(const PrinterConfig(id: 'bar', name: 'Quầy bar', host: '192.168.1.101', categoryIds: {1, 2, 3}))
     .upsertPrinter(const PrinterConfig(id: 'bep', name: 'Bếp', host: '192.168.1.102', categoryIds: {4}, kitchenDefault: true))
     .upsertPrinter(const PrinterConfig(id: 'tn', name: 'Thu ngân', host: '192.168.1.100', paper: PaperWidth.mm80, receipts: true))
@@ -272,6 +274,7 @@ Future<void> shoot(WidgetTester tester, String name, Size size, Widget home, {Fu
 
 void main() {
   setUpAll(loadFonts);
+  setUp(() => SharedPreferences.setMockInitialValues({}));
   customerDisplayShots();
   tearDown(() {});
 
@@ -372,10 +375,10 @@ void main() {
     );
     final tickets = <String, (Ticket, int)>{
       'ticket_kitchen_80mm': (Tickets.kitchen(slip, o, station: 'Quầy bar'), 576),
-      'ticket_provisional_80mm': (Tickets.bill(order(), printSettings, bankQr: bankQr), 576),
-      'ticket_provisional_58mm': (Tickets.bill(order(), printSettings, bankQr: bankQr), 384),
-      'ticket_receipt_80mm': (Tickets.bill(order(paid: true), printSettings), 576),
-      'ticket_receipt_58mm': (Tickets.bill(order(paid: true), printSettings), 384),
+      'ticket_provisional_80mm': (Tickets.bill(order(), receipt, bankQr: bankQr), 576),
+      'ticket_provisional_58mm': (Tickets.bill(order(), receipt, bankQr: bankQr), 384),
+      'ticket_receipt_80mm': (Tickets.bill(order(paid: true), receipt), 576),
+      'ticket_receipt_58mm': (Tickets.bill(order(paid: true), receipt), 384),
       'ticket_test_80mm': (Tickets.test(printSettings.printers.first, categoryNames: {for (final c in menu) c.id: c.name}), 576),
     };
     await tester.runAsync(() async {

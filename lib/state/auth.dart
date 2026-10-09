@@ -102,3 +102,20 @@ final apiClientProvider = Provider<ApiClient>((ref) {
 });
 
 final posRepositoryProvider = Provider<PosRepository>((ref) => PosRepository(ref.watch(apiClientProvider)));
+
+/// Cài đặt chung của cửa hàng trên web (thông tin in phiếu, VietQR, VAT...). Lấy lúc đăng nhập,
+/// tải lại khi mở lại ứng dụng / bấm "Tải lại" — không đụng tới phiên đăng nhập nên các màn hình không phải tải lại.
+final shopSettingsProvider =
+    NotifierProvider<ShopSettingsController, ShopSettings?>(ShopSettingsController.new);
+
+class ShopSettingsController extends Notifier<ShopSettings?> {
+  @override
+  ShopSettings? build() => ref.watch(authProvider).valueOrNull?.settings;
+
+  /// Lấy cài đặt mới nhất từ máy chủ. Lỗi mạng thì giữ cài đặt cũ và ném lỗi cho người gọi.
+  Future<void> refresh() async {
+    if (ref.read(authProvider).valueOrNull == null) return;
+    final me = await ref.read(apiClientProvider).get('me');
+    state = ShopSettings.fromJson(me['settings'] as Map<String, dynamic>);
+  }
+}

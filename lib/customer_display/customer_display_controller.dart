@@ -7,7 +7,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
 import '../printing/vietqr.dart';
 import '../state/auth.dart';
-import '../state/printing.dart';
 import 'display_bridge.dart';
 import 'display_models.dart';
 import 'slide_cache.dart';
@@ -116,7 +115,11 @@ class CustomerDisplayController extends Notifier<CustomerDisplayState> {
   Future<void> refreshContent() async {
     final session = ref.read(authProvider).valueOrNull;
     if (session == null) return;
-    final shopName = (await ref.read(printSettingsProvider.future)).shopName;
+    // Cài đặt chung trên web (tên quán, VietQR...) cũng tải lại theo nhịp này, để máy POS mở cả ngày vẫn mới.
+    try {
+      await ref.read(shopSettingsProvider.notifier).refresh();
+    } catch (_) {}
+    final shopName = ref.read(shopSettingsProvider)?.receipt.shopName ?? 'Leno';
     try {
       final api = ref.read(apiClientProvider);
       final res = await ref.read(posRepositoryProvider).displayConfig();
@@ -163,7 +166,7 @@ class CustomerDisplayController extends Notifier<CustomerDisplayState> {
   /// Đang chọn hình thức thanh toán: chuyển khoản/QR thì hiện mã VietQR, còn lại hiện danh sách món.
   void startPaying(OrderDetail detail, PaymentMethod method) {
     _lastOrder = detail;
-    final bank = ref.read(authProvider).valueOrNull?.settings.bankQr;
+    final bank = ref.read(shopSettingsProvider)?.bankQr;
     final wantsQr = method == PaymentMethod.transfer || method == PaymentMethod.qr;
     if (!wantsQr || bank == null || !bank.enabled || !state.content.config.showQr || detail.order.totalAmount <= 0) {
       _show(_orderSnapshot(detail));

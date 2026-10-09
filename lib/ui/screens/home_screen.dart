@@ -6,7 +6,6 @@ import '../../customer_display/customer_display_controller.dart';
 import '../../models/models.dart';
 import '../../state/auth.dart';
 import '../../state/pos.dart';
-import '../../state/printing.dart';
 import '../layout.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/dialogs.dart';
@@ -32,9 +31,9 @@ class HomeScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(user.canTables ? 'Sơ đồ bàn' : 'Đơn đang phục vụ'),
-            // Tên quán trong Cài đặt cửa hàng (giống dòng đầu hóa đơn), sửa được ngay trên máy.
+            // Tên quán in trên phiếu (web: Cài đặt → Thông tin in phiếu).
             Text(
-              ref.watch(printSettingsProvider).valueOrNull?.shopName ?? '',
+              ref.watch(shopSettingsProvider)?.receipt.shopName ?? '',
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],

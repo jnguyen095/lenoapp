@@ -63,13 +63,28 @@ void main() {
   });
 
   test('PrintSettings survives encode/decode', () {
-    final s = const PrintSettings(autoPrintReceipt: false, shopName: 'Leno').upsertPrinter(bar).upsertPrinter(kitchen);
+    final s = const PrintSettings(autoPrintReceipt: false).upsertPrinter(bar).upsertPrinter(kitchen);
     final back = PrintSettings.decode(s.encode());
     expect(back.autoPrintReceipt, isFalse);
     expect(back.printers.map((p) => p.name), ['Quầy bar', 'Bếp']);
     expect(back.printers.first.categoryIds, {1, 2});
     expect(back.printers.last.kitchenDefault, isTrue);
     expect(PrintSettings.decode('not json').printers, isEmpty);
+  });
+
+  test('receipt info comes from the server settings, old servers fall back to the site name', () {
+    final s = ShopSettings.fromJson({
+      'site_name': 'Leno',
+      'vat_percent': 0,
+      'receipt': {'shop_name': 'Leno Coffee', 'address': '28 Võ Văn Kiệt', 'phone': '0974', 'footer': 'Hẹn gặp lại'},
+    });
+    expect(s.receipt.shopName, 'Leno Coffee');
+    expect(s.receipt.phone, '0974');
+    expect(s.receipt.footer, 'Hẹn gặp lại');
+
+    final old = ShopSettings.fromJson({'site_name': 'Leno Web', 'vat_percent': 8});
+    expect(old.receipt.shopName, 'Leno Web');
+    expect(old.receipt.footer, isNotEmpty);
   });
 
   test('EscPos.raster packs dark pixels MSB-first per row', () {

@@ -110,9 +110,9 @@ class PrintActions {
       report.notConfigured = true;
       return report;
     }
-    // Tài khoản nhận chuyển khoản lấy từ máy chủ lúc đăng nhập (Cài đặt trên web).
-    final bankQr = _ref.read(authProvider).valueOrNull?.settings.bankQr;
-    final ticket = Tickets.bill(detail, settings, bankQr: bankQr);
+    // Thông tin in phiếu + tài khoản nhận chuyển khoản: cài đặt chung trên web (Cài đặt).
+    final shop = _ref.read(shopSettingsProvider);
+    final ticket = Tickets.bill(detail, shop?.receipt ?? const ReceiptInfo(), bankQr: shop?.bankQr);
     await Future.wait([for (final p in printers) _run(report, p, ticket)]);
     return report;
   }

@@ -40,7 +40,7 @@ class _CustomerDisplayPreviewScreenState extends ConsumerState<CustomerDisplayPr
       case _PreviewMode.order:
         return order;
       case _PreviewMode.paying:
-        final bank = ref.read(authProvider).valueOrNull?.settings.bankQr;
+        final bank = ref.read(shopSettingsProvider)?.bankQr;
         return DisplaySnapshot(
           state: DisplayState.paying,
           orderId: 0,

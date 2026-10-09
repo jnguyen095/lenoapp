@@ -59,7 +59,7 @@ class Tickets {
 
   /// Phiếu tạm tính (đơn đang mở) hoặc phiếu tính tiền (đơn đã thanh toán).
   /// [bankQr] bật thì phiếu tạm tính in mã VietQR (đúng số tiền, nội dung = số HĐ) dưới TỔNG CỘNG.
-  static Ticket bill(OrderDetail detail, PrintSettings settings, {BankQr? bankQr}) {
+  static Ticket bill(OrderDetail detail, ReceiptInfo receipt, {BankQr? bankQr}) {
     final order = detail.order;
     final paid = order.status == Status.paid;
     final showQr = !paid && bankQr != null && bankQr.enabled && order.totalAmount > 0;
@@ -72,11 +72,11 @@ class Tickets {
     const aligns = [TextAlign.left, TextAlign.right, TextAlign.center, TextAlign.right];
 
     return Ticket([
-      if (settings.shopName.isNotEmpty) TicketText(settings.shopName, align: TextAlign.center, scale: 1.4, bold: true),
+      if (receipt.shopName.isNotEmpty) TicketText(receipt.shopName, align: TextAlign.center, scale: 1.4, bold: true),
       // Địa chỉ - số điện thoại trên cùng một dòng (có cái nào in cái đó).
-      if (settings.shopAddress.isNotEmpty || settings.shopPhone.isNotEmpty)
+      if (receipt.address.isNotEmpty || receipt.phone.isNotEmpty)
         TicketText(
-          [settings.shopAddress, settings.shopPhone].where((s) => s.isNotEmpty).join(' - '),
+          [receipt.address, receipt.phone].where((s) => s.isNotEmpty).join(' - '),
           align: TextAlign.center,
         ),
       TicketText(paid ? 'PHIẾU TÍNH TIỀN' : 'PHIẾU TẠM TÍNH', align: TextAlign.center, scale: 1.2, bold: true),
@@ -118,7 +118,7 @@ class Tickets {
       if (paid && payment != null) TicketRow('Hình thức TT', payment.methodLabel),
       const TicketDivider(),
       TicketText(
-        paid ? settings.footer : '-- Phiếu tạm tính, chưa phải hóa đơn --',
+        paid ? receipt.footer : '-- Phiếu tạm tính, chưa phải hóa đơn --',
         align: TextAlign.center,
       ),
     ]);

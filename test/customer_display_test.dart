@@ -7,9 +7,7 @@ import 'package:leno_pos/customer_display/display_bridge.dart';
 import 'package:leno_pos/customer_display/display_models.dart';
 import 'package:leno_pos/customer_display/slide_cache.dart';
 import 'package:leno_pos/models/models.dart';
-import 'package:leno_pos/printing/print_settings.dart';
 import 'package:leno_pos/state/auth.dart';
-import 'package:leno_pos/state/printing.dart';
 
 /// Ghi lại những gì ứng dụng gửi sang màn hình phụ.
 class _FakeBridge extends DisplayBridge {
@@ -34,13 +32,9 @@ class _FakeAuth extends AuthController {
         token: 't',
         user: const User(id: 1, username: 'lan', fullname: 'Lan', role: 'CASHIER', roleLabel: 'Thu ngân',
             canTables: true, canOrders: true),
-        settings: ShopSettings(siteName: 'Leno', vatPercent: 0, takeawayEnabled: true, bankQr: bank),
+        settings: ShopSettings(siteName: 'Leno', vatPercent: 0, takeawayEnabled: true, bankQr: bank,
+            receipt: const ReceiptInfo(shopName: 'Leno Quán')),
       );
-}
-
-class _FakePrintSettings extends PrintSettingsController {
-  @override
-  Future<PrintSettings> build() async => const PrintSettings(shopName: 'Leno Quán');
 }
 
 OrderDetail _order({int id = 7, String status = 'OPEN', Payment? payment}) {
@@ -78,7 +72,6 @@ void main() {
     container = ProviderContainer(overrides: [
       displayBridgeProvider.overrideWithValue(bridge),
       authProvider.overrideWith(() => _FakeAuth(bank: bank)),
-      printSettingsProvider.overrideWith(_FakePrintSettings.new),
     ]);
     await container.read(authProvider.future);
     final c = container.read(customerDisplayProvider.notifier);

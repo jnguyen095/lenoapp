@@ -152,10 +152,6 @@ class PrintSettings {
     this.printers = const [],
     this.autoPrintKitchen = true,
     this.autoPrintReceipt = true,
-    this.shopName = 'Leno',
-    this.shopAddress = '28 Võ Văn Kiệt, BMT',
-    this.shopPhone = '',
-    this.footer = 'Cảm ơn quý khách - Hẹn gặp lại!',
   });
 
   factory PrintSettings.fromJson(Map<String, dynamic> j) => PrintSettings(
@@ -164,10 +160,6 @@ class PrintSettings {
             .toList(growable: false),
         autoPrintKitchen: j['auto_print_kitchen'] != false,
         autoPrintReceipt: j['auto_print_receipt'] != false,
-        shopName: (j['shop_name'] as String?) ?? 'Leno',
-        shopAddress: (j['shop_address'] as String?) ?? '',
-        shopPhone: (j['shop_phone'] as String?) ?? '',
-        footer: (j['footer'] as String?) ?? '',
       );
 
   factory PrintSettings.decode(String? raw) {
@@ -187,12 +179,6 @@ class PrintSettings {
   /// Tự in hóa đơn ngay sau khi thanh toán.
   final bool autoPrintReceipt;
 
-  /// Dòng đầu hóa đơn / phiếu tạm tính (web đang in "Leno" + địa chỉ).
-  final String shopName;
-  final String shopAddress;
-  final String shopPhone;
-  final String footer;
-
   Iterable<PrinterConfig> get activePrinters => printers.where((p) => p.enabled);
 
   Iterable<PrinterConfig> get receiptPrinters => activePrinters.where((p) => p.receipts);
@@ -201,29 +187,17 @@ class PrintSettings {
         'printers': printers.map((p) => p.toJson()).toList(),
         'auto_print_kitchen': autoPrintKitchen,
         'auto_print_receipt': autoPrintReceipt,
-        'shop_name': shopName,
-        'shop_address': shopAddress,
-        'shop_phone': shopPhone,
-        'footer': footer,
       });
 
   PrintSettings copyWith({
     List<PrinterConfig>? printers,
     bool? autoPrintKitchen,
     bool? autoPrintReceipt,
-    String? shopName,
-    String? shopAddress,
-    String? shopPhone,
-    String? footer,
   }) =>
       PrintSettings(
         printers: printers ?? this.printers,
         autoPrintKitchen: autoPrintKitchen ?? this.autoPrintKitchen,
         autoPrintReceipt: autoPrintReceipt ?? this.autoPrintReceipt,
-        shopName: shopName ?? this.shopName,
-        shopAddress: shopAddress ?? this.shopAddress,
-        shopPhone: shopPhone ?? this.shopPhone,
-        footer: footer ?? this.footer,
       );
 
   /// Thêm mới hoặc thay máy in cùng id.
