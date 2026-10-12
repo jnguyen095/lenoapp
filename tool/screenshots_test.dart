@@ -336,6 +336,12 @@ void main() {
     addTearDown(tester.view.reset);
   });
 
+  testWidgets('table map offers menu', (tester) async {
+    await shoot(tester, 'home_offers_menu_tablet_landscape', sizes['tablet_landscape']!, const HomeScreen(),
+        interact: () => tester.tap(find.byIcon(Icons.percent)));
+    addTearDown(tester.view.reset);
+  });
+
   testWidgets('order phone - ordered tab', (tester) async {
     await shoot(tester, 'order_phone_items', sizes['phone']!, const OrderScreen(orderId: 83),
         interact: () => tester.tap(find.textContaining('Món đã gọi')));

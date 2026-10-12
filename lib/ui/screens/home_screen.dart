@@ -39,6 +39,12 @@ class HomeScreen extends ConsumerWidget {
             ),
           ],
         ),
+        // Bảng giá + khuyến mãi cho mọi đơn đang mở và bàn mở sau (giống web) — nút gọn trên thanh tiêu đề để
+        // sơ đồ bàn có thêm chỗ. Đổi xong làm mới tiền trên các bàn.
+        actions: [
+          if (user.canTables)
+            ShopOffersActions(onApplied: () => ref.read(tablesProvider.notifier).refreshSilently()),
+        ],
       ),
       body: user.canTables ? _TableMap(canOrder: user.canOrders) : const _ActiveOrders(),
     );
@@ -216,8 +222,6 @@ class _TableMapState extends ConsumerState<_TableMap> {
         return Column(
           children: [
             if (_busy) const LinearProgressIndicator(minHeight: 2) else const SizedBox(height: 2),
-            // Bảng giá + khuyến mãi cho mọi đơn đang mở và bàn mở sau (giống web) — đổi xong làm mới tiền trên các bàn.
-            ShopOffersBar(onApplied: _tables.refreshSilently),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
               child: SizedBox(
