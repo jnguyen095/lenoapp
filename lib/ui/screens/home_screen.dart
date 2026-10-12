@@ -9,6 +9,7 @@ import '../../state/pos.dart';
 import '../layout.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/dialogs.dart';
+import '../widgets/offers.dart';
 import '../widgets/table_card.dart';
 import 'order_screen.dart';
 
@@ -215,6 +216,8 @@ class _TableMapState extends ConsumerState<_TableMap> {
         return Column(
           children: [
             if (_busy) const LinearProgressIndicator(minHeight: 2) else const SizedBox(height: 2),
+            // Bảng giá + khuyến mãi cho mọi đơn đang mở và bàn mở sau (giống web) — đổi xong làm mới tiền trên các bàn.
+            ShopOffersBar(onApplied: _tables.refreshSilently),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
               child: SizedBox(
@@ -233,7 +236,11 @@ class _TableMapState extends ConsumerState<_TableMap> {
             ),
             Expanded(
               child: RefreshIndicator(
-                onRefresh: _tables.refresh,
+                // Kéo xuống: tải lại bàn + bảng giá / khuyến mãi (theo ngày / thứ, máy khác có thể vừa đổi).
+                onRefresh: () {
+                  ref.invalidate(shopOffersProvider);
+                  return _tables.refresh();
+                },
                 child: shown.isEmpty
                     ? ListView(children: const [
                         SizedBox(height: 120),

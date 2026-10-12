@@ -70,9 +70,10 @@ class Tickets {
     final items = detail.items.where((i) => !i.isCancelled);
     final payment = detail.payment;
     String money(double v) => formatMoney(v, withUnit: false);
-    // Bảng giá: tổng tiền khách được giảm so với giá gốc (món bị tăng giá không tính) — giống web.
+    // Bạn đã tiết kiệm = phần giảm theo bảng giá (món bị tăng giá không tính) + khuyến mãi trên tổng đơn — giống web.
     final saved = items.fold<double>(
-        0, (s, it) => it.hasOffer && it.originalPrice! > it.price ? s + (it.originalPrice! - it.price) * it.qty : s);
+            0, (s, it) => it.hasOffer && it.originalPrice! > it.price ? s + (it.originalPrice! - it.price) * it.qty : s) +
+        order.discountAmount; // cộng cả khuyến mãi trên tổng đơn
 
     // Bảng món 4 cột: Tên món | Đ.Giá | SL | Tiền.
     const flex = [46.0, 21.0, 9.0, 24.0];
@@ -112,7 +113,11 @@ class Tickets {
       ],
       const TicketDivider(),
       TicketRow('Tạm tính', money(order.subtotal)),
-      TicketRow('Chiết khấu', order.discountAmount > 0 ? '-${money(order.discountAmount)}' : '0'),
+      // Tên khuyến mãi trong ngoặc khi đang được giảm (giống web).
+      TicketRow(
+        order.discountAmount > 0 && (order.discountName ?? '').isNotEmpty ? 'Chiết khấu (${order.discountName})' : 'Chiết khấu',
+        order.discountAmount > 0 ? '-${money(order.discountAmount)}' : '0',
+      ),
       if (order.vatAmount > 0) TicketRow('VAT', money(order.vatAmount)),
       TicketRow('TỔNG CỘNG', money(order.totalAmount), bold: true),
       if (saved > 0) TicketRow('Bạn đã tiết kiệm', money(saved)),

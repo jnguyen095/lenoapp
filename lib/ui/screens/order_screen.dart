@@ -10,6 +10,7 @@ import '../layout.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/dialogs.dart';
 import '../widgets/menu_panel.dart';
+import '../widgets/offers.dart';
 import '../widgets/order_panel.dart';
 import '../widgets/payment_sheet.dart';
 import '../widgets/kitchen_history_sheet.dart';
@@ -90,8 +91,10 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
 
   void _setQty(OrderItem item, int qty) => _act(() => _order.setQty(item, qty));
 
-  /// Chọn bảng giá cho đơn (null = giá gốc) — máy chủ tính lại mọi món.
-  void _setPriceBook(int? priceBookId) => _act(() => _order.setPriceBook(priceBookId));
+  /// Bỏ bảng giá / khuyến mãi cho riêng đơn này (chọn làm ở Sơ đồ bàn, áp cho mọi đơn đang mở).
+  void _removePriceBook() => _act(() => _order.removePriceBook());
+
+  void _removeDiscount() => _act(() => _order.removeDiscount());
 
   Future<void> _editItemNote(OrderItem item) async {
     final note = await showNoteDialog(context, title: 'Ghi chú — ${item.productName}', initial: item.note);
@@ -253,19 +256,29 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
       child: _busy > 0 ? const LinearProgressIndicator(minHeight: 2) : const SizedBox(height: 2),
     );
 
-    final orderPanel = RefreshIndicator(
-      onRefresh: _order.refresh,
-      child: OrderPanel(
-        detail: detail,
-        showPendingBadge: !wide,
-        onQty: _setQty,
-        onNote: _editItemNote,
-        onRemove: _removeItem,
-      ),
+    // "Món đã gọi": thẻ bảng giá / khuyến mãi của đơn ở trên (giống web), danh sách món bên dưới.
+    final orderPanel = Column(
+      children: [
+        OrderOfferChips(
+          order: order,
+          editable: detail.isActive && _busy == 0,
+          onRemovePriceBook: _removePriceBook,
+          onRemoveDiscount: _removeDiscount,
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _order.refresh,
+            child: OrderPanel(
+              detail: detail,
+              showPendingBadge: !wide,
+              onQty: _setQty,
+              onNote: _editItemNote,
+              onRemove: _removeItem,
+            ),
+          ),
+        ),
+      ],
     );
-    final priceBookBar = detail.isActive
-        ? PriceBookBar(order: order, enabled: _busy == 0, onChanged: _setPriceBook)
-        : const SizedBox.shrink();
     final summary = OrderSummaryBar(
       detail: detail,
       onNotify: _busy > 0 ? null : _notifyKitchen,
@@ -388,7 +401,6 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
                       ],
                     ),
                   ),
-                  priceBookBar,
                   Expanded(child: orderPanel),
                   summary,
                 ],
@@ -419,7 +431,7 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
             ),
           ),
         ),
-        body: Column(children: [priceBookBar, Expanded(child: TabBarView(children: [menu, orderPanel]))]),
+        body: TabBarView(children: [menu, orderPanel]),
         bottomNavigationBar: summary,
       ),
     );
@@ -475,57 +487,3 @@ class _SearchField extends StatelessWidget {
   }
 }
 
-/// Chọn bảng giá cho đơn (giống web): chỉ hiện khi hôm nay có bảng giá áp dụng hoặc đơn đang dùng một bảng giá.
-/// Người bán tự chọn — không tự áp. Bảng giá đơn đang dùng mà hôm nay hết hiệu lực vẫn hiện "(hết hiệu lực)".
-class PriceBookBar extends ConsumerWidget {
-  const PriceBookBar({super.key, required this.order, required this.enabled, required this.onChanged});
-
-  final Order order;
-  final bool enabled;
-  final ValueChanged<int?> onChanged;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final books = ref.watch(priceBooksProvider).valueOrNull ?? const <PriceBook>[];
-    final current = order.priceBookId;
-    if (books.isEmpty && current == null) return const SizedBox.shrink();
-
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final listed = current == null || books.any((b) => b.id == current);
-    final on = current != null;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 4, 12, 4),
-      color: on ? scheme.primaryContainer.withValues(alpha: 0.45) : scheme.surfaceContainerLow,
-      child: Row(
-        children: [
-          Icon(Icons.sell_outlined, size: 18, color: on ? scheme.primary : scheme.onSurfaceVariant),
-          const SizedBox(width: 8),
-          Text('Bảng giá', style: theme.textTheme.labelLarge?.copyWith(color: on ? scheme.primary : scheme.onSurfaceVariant)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<int?>(
-                isExpanded: true,
-                value: current,
-                onChanged: enabled ? (v) { if (v != current) onChanged(v); } : null,
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  fontWeight: on ? FontWeight.w600 : FontWeight.w400,
-                  color: on ? scheme.primary : scheme.onSurface,
-                ),
-                items: [
-                  const DropdownMenuItem<int?>(value: null, child: Text('Giá gốc')),
-                  if (!listed)
-                    DropdownMenuItem<int?>(value: current, child: Text('${order.priceBookName ?? 'Bảng giá'} (hết hiệu lực)')),
-                  for (final b in books) DropdownMenuItem<int?>(value: b.id, child: Text(b.name, overflow: TextOverflow.ellipsis)),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

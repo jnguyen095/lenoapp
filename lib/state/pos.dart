@@ -67,6 +67,22 @@ final priceBooksProvider = FutureProvider.autoDispose<List<PriceBook>>(
   (ref) => ref.watch(posRepositoryProvider).priceBooks(),
 );
 
+/// Bảng giá + khuyến mãi chọn ở Sơ đồ bàn — áp cho mọi đơn đang mở và bàn mở sau (giống web).
+final shopOffersProvider =
+    AsyncNotifierProvider.autoDispose<ShopOffersController, ShopOffers>(ShopOffersController.new);
+
+class ShopOffersController extends AutoDisposeAsyncNotifier<ShopOffers> {
+  @override
+  Future<ShopOffers> build() => ref.watch(posRepositoryProvider).offers();
+
+  /// Lưu lựa chọn mới; trả về số đơn đang mở vừa được áp. Lỗi (vd hết hiệu lực) ném ra, lựa chọn cũ giữ nguyên.
+  Future<int> apply({int? priceBookId, int? discountId}) async {
+    final res = await ref.read(posRepositoryProvider).setOffers(priceBookId: priceBookId, discountId: discountId);
+    state = AsyncData(res);
+    return res.appliedCount;
+  }
+}
+
 /// Một đơn đang mở. Mọi thao tác chạy tuần tự (bấm nhanh nhiều món không bị đè kết quả)
 /// và thay state bằng đơn mới nhất máy chủ trả về. Lỗi ném ra cho màn hình hiện thông báo.
 final orderProvider =
@@ -112,8 +128,11 @@ class OrderController extends AutoDisposeFamilyAsyncNotifier<OrderDetail, int> {
 
   Future<OrderDetail> setNote(String? note) => _run(() => _repo.setOrderNote(arg, note));
 
-  /// Chọn / đổi / bỏ bảng giá ([priceBookId] null = giá gốc); mọi món được tính lại.
-  Future<OrderDetail> setPriceBook(int? priceBookId) => _run(() => _repo.setPriceBook(arg, priceBookId));
+  /// Bỏ bảng giá cho riêng đơn này (về giá gốc) — chọn bảng giá làm ở Sơ đồ bàn.
+  Future<OrderDetail> removePriceBook() => _run(() => _repo.removePriceBook(arg));
+
+  /// Bỏ khuyến mãi cho riêng đơn này.
+  Future<OrderDetail> removeDiscount() => _run(() => _repo.removeDiscount(arg));
 
   Future<OrderDetail> notifyKitchen() => _run(() => _repo.notifyKitchen(arg));
 

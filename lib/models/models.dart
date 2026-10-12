@@ -284,6 +284,9 @@ class Order {
     required this.paidAt,
     this.priceBookId,
     this.priceBookName,
+    this.discountId,
+    this.discountName,
+    this.discountMinOrder,
   });
 
   factory Order.fromJson(Map<String, dynamic> j) => Order(
@@ -304,6 +307,9 @@ class Order {
         paidAt: _str(j['paid_at']),
         priceBookId: _intOrNull(j['price_book_id']),
         priceBookName: _str(j['price_book_name']),
+        discountId: _intOrNull(j['discount_id']),
+        discountName: _str(j['discount_name']),
+        discountMinOrder: j['discount_min_order'] == null ? null : _money(j['discount_min_order']),
       );
 
   final int id;
@@ -325,6 +331,18 @@ class Order {
   /// Bảng giá người bán chọn cho đơn (null = giá gốc); tên lưu lại để in hóa đơn.
   final int? priceBookId;
   final String? priceBookName;
+
+  /// Khuyến mãi trên tổng đơn người bán chọn (null = không). [discountAmount] = số tiền đang được giảm
+  /// (0 khi tạm tính chưa đủ [discountMinOrder]).
+  final int? discountId;
+  final String? discountName;
+  final double? discountMinOrder;
+
+  bool get hasDiscount => discountId != null || (discountName ?? '').isNotEmpty;
+
+  /// Còn thiếu bao nhiêu để khuyến mãi đã chọn được áp (0 = đã giảm / không có khuyến mãi).
+  double get discountShortOf =>
+      hasDiscount && discountAmount <= 0 ? ((discountMinOrder ?? 0) - subtotal).clamp(0, double.infinity).toDouble() : 0;
 }
 
 class OrderItem {
@@ -404,6 +422,89 @@ class PriceBook {
 
   /// Giá bán của [p] theo bảng giá này.
   double priceOf(Product p) => prices[p.id] ?? p.price;
+}
+
+/// Khuyến mãi trên tổng đơn có hiệu lực hôm nay (GET /discounts): giảm % (giới hạn tối đa tuỳ chọn) hoặc số tiền,
+/// cho đơn từ [minOrder]. Người bán tự chọn cho đơn, không tự áp; máy chủ tính số tiền giảm.
+class Discount {
+  const Discount({
+    required this.id,
+    required this.name,
+    required this.type,
+    required this.value,
+    this.maxDiscount,
+    this.minOrder = 0,
+    this.description = '',
+  });
+
+  factory Discount.fromJson(Map<String, dynamic> j) => Discount(
+        id: _int(j['id']),
+        name: j['name'] as String,
+        type: (j['type'] as String?) ?? 'PERCENT',
+        value: _money(j['value']),
+        maxDiscount: j['max_discount'] == null ? null : _money(j['max_discount']),
+        minOrder: _money(j['min_order']),
+        description: (j['description'] as String?) ?? '',
+      );
+
+  final int id;
+  final String name;
+
+  /// PERCENT | AMOUNT.
+  final String type;
+  final double value;
+  final double? maxDiscount;
+  final double minOrder;
+
+  /// Mô tả từ máy chủ, vd "Giảm 15% (tối đa 50.000) · đơn từ 500.000".
+  final String description;
+
+  /// Tên ngắn trong ô chọn (giống web): "Giảm 10% · từ 500K".
+  String get shortLabel {
+    if (minOrder <= 0) return name;
+    // Nghìn đồng, nhóm 3 chữ số bằng dấu chấm (1.500K) — giống number_format trên web.
+    final k = (minOrder / 1000).round().toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => '.');
+    return '$name · từ ${k}K';
+  }
+}
+
+/// Bảng giá + khuyến mãi chọn ở Sơ đồ bàn (GET / POST /offers), dùng chung mọi máy: áp cho mọi đơn đang mở
+/// và bàn mở sau. Lựa chọn hết hiệu lực (sang ngày / thứ khác, bị tắt) máy chủ coi như không chọn.
+class ShopOffers {
+  const ShopOffers({
+    this.priceBookId,
+    this.priceBookName,
+    this.discount,
+    this.priceBooks = const [],
+    this.discounts = const [],
+    this.appliedCount = 0,
+  });
+
+  factory ShopOffers.fromJson(Map<String, dynamic> j) {
+    final book = j['price_book'] as Map<String, dynamic>?;
+    return ShopOffers(
+      priceBookId: book == null ? null : _int(book['id']),
+      priceBookName: book?['name'] as String?,
+      discount: j['discount'] is Map<String, dynamic> ? Discount.fromJson(j['discount'] as Map<String, dynamic>) : null,
+      priceBooks: [for (final b in (j['price_books'] as List?) ?? const []) PriceBook.fromJson(b as Map<String, dynamic>)],
+      discounts: [for (final d in (j['discounts'] as List?) ?? const []) Discount.fromJson(d as Map<String, dynamic>)],
+      appliedCount: _intOrNull(j['applied_count']) ?? 0,
+    );
+  }
+
+  final int? priceBookId;
+  final String? priceBookName;
+  final Discount? discount;
+
+  /// Lựa chọn có hiệu lực hôm nay.
+  final List<PriceBook> priceBooks;
+  final List<Discount> discounts;
+
+  /// Số đơn đang mở vừa được áp (chỉ có sau POST).
+  final int appliedCount;
+
+  /// Hôm nay có gì để chọn, hoặc đang chọn — không thì ẩn hàng chọn trên Sơ đồ bàn.
+  bool get isRelevant => priceBooks.isNotEmpty || discounts.isNotEmpty || priceBookId != null || discount != null;
 }
 
 class Payment {

@@ -37,9 +37,6 @@ class OrderPanel extends StatelessWidget {
       if ((order.tableNote ?? '').isNotEmpty)
         _Banner(icon: Icons.table_restaurant, text: 'Ghi chú bàn: ${order.tableNote}'),
       if ((order.note ?? '').isNotEmpty) _Banner(icon: Icons.sticky_note_2_outlined, text: 'Ghi chú đơn: ${order.note}'),
-      // Đơn đã đóng: bảng giá đã dùng (đơn đang mở chọn ở thanh Bảng giá).
-      if (!detail.isActive && (order.priceBookName ?? '').isNotEmpty)
-        _Banner(icon: Icons.sell_outlined, text: 'Bảng giá: ${order.priceBookName}'),
     ];
 
     if (detail.items.isEmpty) {
@@ -342,7 +339,13 @@ class OrderSummaryBar extends StatelessWidget {
             children: [
               if (order.vatAmount > 0 || order.discountAmount > 0) ...[
                 _line(context, 'Tạm tính', formatMoney(order.subtotal)),
-                if (order.discountAmount > 0) _line(context, 'Giảm giá', '-${formatMoney(order.discountAmount)}'),
+                if (order.discountAmount > 0)
+                  _line(
+                    context,
+                    (order.discountName ?? '').isEmpty ? 'Khuyến mãi' : 'Khuyến mãi (${order.discountName})',
+                    '-${formatMoney(order.discountAmount)}',
+                    color: Colors.green.shade700,
+                  ),
                 if (order.vatAmount > 0) _line(context, 'VAT', formatMoney(order.vatAmount)),
               ],
               Row(
@@ -414,9 +417,16 @@ class OrderSummaryBar extends StatelessWidget {
     );
   }
 
-  Widget _line(BuildContext context, String label, String value) => Padding(
+  Widget _line(BuildContext context, String label, String value, {Color? color}) => Padding(
         padding: const EdgeInsets.only(bottom: 2),
-        child: Row(children: [Text(label), const Spacer(), Text(value)]),
+        child: DefaultTextStyle.merge(
+          style: color == null ? null : TextStyle(color: color, fontWeight: FontWeight.w600),
+          child: Row(children: [
+            Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis)),
+            const SizedBox(width: 8),
+            Text(value),
+          ]),
+        ),
       );
 }
 

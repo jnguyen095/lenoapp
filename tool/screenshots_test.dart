@@ -109,8 +109,16 @@ OrderItem item(int id, int productId, String name, int qty, double price,
 /// Bảng giá mẫu: cà phê sữa đá 18k -> 14k, trà sữa 30k -> 24k.
 const priceBook = PriceBook(id: 6, name: 'Giảm 20% nước uống', prices: {102: 14000, 201: 24000, 202: 25600});
 
-/// [book] = đơn đang bán theo [priceBook].
-OrderDetail order({bool paid = false, bool book = false}) {
+/// Khuyến mãi mẫu trên tổng đơn.
+const discounts_ = [
+  Discount(id: 2, name: 'Giảm 10%', type: 'PERCENT', value: 10, maxDiscount: 50000, minOrder: 100000,
+      description: 'Giảm 10% (tối đa 50.000) · đơn từ 100.000'),
+  Discount(id: 3, name: 'Giảm 20k đơn lớn', type: 'AMOUNT', value: 20000, minOrder: 500000,
+      description: 'Giảm 20.000đ · đơn từ 500.000'),
+];
+
+/// [book] = đơn đang bán theo [priceBook]. [discountId] = khuyến mãi đã chọn (2: đủ điều kiện, 3: chưa đủ).
+OrderDetail order({bool paid = false, bool book = false, int? discountId}) {
   final items = [
     book
         ? item(1, 102, 'Cà phê sữa đá', 2, 14000, notified: 2, note: 'Ít đá', original: 18000)
@@ -121,13 +129,20 @@ OrderDetail order({bool paid = false, bool book = false}) {
     item(3, 401, 'Khoai tây chiên', 1, 25000),
     item(4, 301, 'Trà đào cam sả', 3, 28000, note: 'Không đường'),
   ];
-  final total = items.fold<double>(0, (s, i) => s + i.amount);
+  final subtotal = items.fold<double>(0, (s, i) => s + i.amount);
+  final disc = discountId == null ? null : discounts_.firstWhere((d) => d.id == discountId);
+  final discount = disc == null || subtotal < disc.minOrder
+      ? 0.0
+      : (disc.type == 'PERCENT' ? (subtotal * disc.value / 100).roundToDouble().clamp(0, disc.maxDiscount ?? subtotal) : disc.value)
+          .toDouble();
+  final total = subtotal - discount;
   return OrderDetail(
     order: Order(
       id: 83, orderNo: 'ORD${_ymd()}-0192B', orderType: 'DINE_IN', status: paid ? 'PAID' : 'OPEN', note: 'Khách VIP',
-      tableId: 3, tableName: 'Bàn 3', tableNote: 'Gần cửa sổ', createdByName: 'Nguyễn Thị Lan', subtotal: total,
-      discountAmount: 0, vatAmount: 0, totalAmount: total, createdAt: _ago(27), paidAt: paid ? _ago(0) : null,
+      tableId: 3, tableName: 'Bàn 3', tableNote: 'Gần cửa sổ', createdByName: 'Nguyễn Thị Lan', subtotal: subtotal,
+      discountAmount: discount, vatAmount: 0, totalAmount: total, createdAt: _ago(27), paidAt: paid ? _ago(0) : null,
       priceBookId: book ? priceBook.id : null, priceBookName: book ? priceBook.name : null,
+      discountId: disc?.id, discountName: disc?.name, discountMinOrder: disc?.minOrder,
     ),
     isActive: !paid,
     items: items,
@@ -150,6 +165,10 @@ class FakeRepo extends PosRepository {
   Future<OrderDetail> order(int orderId) async => order_();
   @override
   Future<List<PriceBook>> priceBooks() async => const [priceBook];
+  @override
+  Future<ShopOffers> offers() async => ShopOffers(
+        priceBookId: priceBook.id, priceBookName: priceBook.name, discount: discounts_.first,
+        priceBooks: const [priceBook], discounts: discounts_);
   @override
   Future<OrderHistory> orderHistory({String? date}) async => OrderHistory(
         date: '2026-10-07',
@@ -199,7 +218,8 @@ final tables_ = tables;
 final menu_ = menu;
 /// Đơn màn hình đơn dùng — bật [useBook] để chụp đơn bán theo bảng giá.
 var useBook = false;
-OrderDetail order_() => order(book: useBook);
+int? useDiscount;
+OrderDetail order_() => order(book: useBook, discountId: useDiscount);
 
 class FakeAuth extends AuthController {
   @override
@@ -305,8 +325,13 @@ void main() {
   testWidgets('order with price book', (tester) async {
     useBook = true;
     addTearDown(() => useBook = false);
+    useDiscount = 2;
+    addTearDown(() => useDiscount = null);
     await shoot(tester, 'order_pricebook_tablet_landscape', sizes['tablet_landscape']!, const OrderScreen(orderId: 83));
     await shoot(tester, 'order_pricebook_phone_items', sizes['phone']!, const OrderScreen(orderId: 83),
+        interact: () => tester.tap(find.textContaining('Món đã gọi')));
+    useDiscount = 3; // chưa đủ đơn tối thiểu
+    await shoot(tester, 'order_discount_waiting_phone', sizes['phone']!, const OrderScreen(orderId: 83),
         interact: () => tester.tap(find.textContaining('Món đã gọi')));
     addTearDown(tester.view.reset);
   });
@@ -398,7 +423,7 @@ void main() {
     final tickets = <String, (Ticket, int)>{
       'ticket_kitchen_80mm': (Tickets.kitchen(slip, o, station: 'Quầy bar'), 576),
       'ticket_provisional_80mm': (Tickets.bill(order(), receipt, bankQr: bankQr), 576),
-      'ticket_pricebook_80mm': (Tickets.bill(order(book: true), receipt), 576),
+      'ticket_pricebook_80mm': (Tickets.bill(order(book: true, discountId: 2), receipt), 576),
       'ticket_provisional_58mm': (Tickets.bill(order(), receipt, bankQr: bankQr), 384),
       'ticket_receipt_80mm': (Tickets.bill(order(paid: true), receipt), 576),
       'ticket_receipt_58mm': (Tickets.bill(order(paid: true), receipt), 384),

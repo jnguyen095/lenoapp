@@ -81,4 +81,90 @@ void main() {
     expect(lines.whereType<TicketColumns>().any((c) => c.strike), isFalse);
     expect(lines.whereType<TicketRow>().any((r) => r.left == 'Bạn đã tiết kiệm'), isFalse);
   });
+
+  // ---- Khuyến mãi trên tổng đơn (cùng hàng với bảng giá) ----
+
+  Order discounted({required double subtotal, required double discount, double minOrder = 100000}) => Order(
+        id: 87, orderNo: 'ORD3', orderType: 'DINE_IN', status: 'OPEN', note: null, tableId: 2, tableName: 'Bàn 2',
+        tableNote: null, createdByName: null, subtotal: subtotal, discountAmount: discount, vatAmount: 0,
+        totalAmount: subtotal - discount, createdAt: null, paidAt: null,
+        discountId: 2, discountName: 'Giảm 10%', discountMinOrder: minOrder,
+      );
+
+  test('discount and order discount fields parse from the API', () {
+    final d = Discount.fromJson({
+      'id': 2, 'name': 'Giảm 10%', 'type': 'PERCENT', 'value': 10, 'max_discount': 50000, 'min_order': 1500000,
+      'description': 'Giảm 10% (tối đa 50.000) · đơn từ 1.500.000',
+    });
+    expect(d.maxDiscount, 50000);
+    expect(d.shortLabel, 'Giảm 10% · từ 1.500K', reason: 'giống ô chọn trên web');
+    expect(Discount.fromJson({'id': 3, 'name': 'Giảm 5k', 'type': 'AMOUNT', 'value': 5000}).shortLabel, 'Giảm 5k');
+
+    final o = Order.fromJson({
+      'id': 1, 'order_no': 'ORD1', 'order_type': 'DINE_IN', 'status': 'OPEN', 'table_name': 'Bàn 2',
+      'subtotal': 80000, 'discount_amount': 0, 'vat_amount': 0, 'total_amount': 80000,
+      'discount_id': 2, 'discount_name': 'Giảm 10%', 'discount_min_order': 100000,
+    });
+    expect(o.hasDiscount, isTrue);
+    expect(o.discountMinOrder, 100000);
+  });
+
+  test('chosen discount below the minimum order tells how much more to buy', () {
+    expect(discounted(subtotal: 80000, discount: 0).discountShortOf, 20000, reason: 'Mua thêm 20.000 để được giảm');
+    expect(discounted(subtotal: 120000, discount: 12000).discountShortOf, 0, reason: 'Đã giảm 12.000');
+    const none = Order(
+      id: 1, orderNo: 'O', orderType: 'DINE_IN', status: 'OPEN', note: null, tableId: 1, tableName: 'Bàn 1',
+      tableNote: null, createdByName: null, subtotal: 0, discountAmount: 0, vatAmount: 0, totalAmount: 0,
+      createdAt: null, paidAt: null,
+    );
+    expect(none.hasDiscount, isFalse);
+    expect(none.discountShortOf, 0);
+  });
+
+  test('bill names the discount and counts it in the amount saved', () {
+    final detail = OrderDetail(
+      order: discounted(subtotal: 120000, discount: 12000),
+      isActive: true,
+      items: const [
+        OrderItem(id: 1, productId: 77, productName: 'Pepsi', image: null, qty: 10, notifiedQty: 10, price: 12000,
+            amount: 120000, note: null, notifiedNote: null, status: 'ACTIVE', pending: false, originalPrice: 15000),
+      ],
+      pendingCount: 0,
+    );
+    final rows = Tickets.bill(detail, const ReceiptInfo(shopName: 'Leno')).lines.whereType<TicketRow>().toList();
+    expect(rows.map((r) => r.left), containsAllInOrder(['Tạm tính', 'Chiết khấu (Giảm 10%)', 'TỔNG CỘNG']));
+    expect(rows.firstWhere((r) => r.left.startsWith('Chiết khấu')).right, '-12.000');
+    // 3.000 x 10 theo bảng giá + 12.000 khuyến mãi.
+    expect(rows.firstWhere((r) => r.left == 'Bạn đã tiết kiệm').right, '42.000');
+
+    // Chưa đủ đơn tối thiểu: giảm 0, không ghi tên khuyến mãi.
+    final waiting = OrderDetail(order: discounted(subtotal: 80000, discount: 0), isActive: true, items: const [], pendingCount: 0);
+    final waitingRows = Tickets.bill(waiting, const ReceiptInfo(shopName: 'Leno')).lines.whereType<TicketRow>();
+    expect(waitingRows.firstWhere((r) => r.left.startsWith('Chiết khấu')).left, 'Chiết khấu');
+  });
+
+  test('shop offers chosen on the table map parse from GET / POST /offers', () {
+    final o = ShopOffers.fromJson({
+      'price_book': {'id': 6, 'name': 'Giảm 20%'},
+      'discount': {'id': 1, 'name': 'Giảm 10%', 'type': 'PERCENT', 'value': 10, 'min_order': 100000,
+          'description': 'Giảm 10% · đơn từ 100.000'},
+      'price_books': [
+        {'id': 6, 'name': 'Giảm 20%', 'prices': {'77': 12000}},
+      ],
+      'discounts': [
+        {'id': 1, 'name': 'Giảm 10%', 'type': 'PERCENT', 'value': 10, 'min_order': 100000},
+      ],
+      'applied_count': 3,
+    });
+    expect(o.priceBookId, 6);
+    expect(o.discount?.description, 'Giảm 10% · đơn từ 100.000');
+    expect(o.priceBooks.single.prices, {77: 12000.0});
+    expect(o.appliedCount, 3);
+    expect(o.isRelevant, isTrue);
+
+    // Không chọn gì và hôm nay không có bảng giá / khuyến mãi -> ẩn hàng chọn trên Sơ đồ bàn.
+    final empty = ShopOffers.fromJson({'price_book': null, 'discount': null, 'price_books': [], 'discounts': []});
+    expect(empty.isRelevant, isFalse);
+    expect(empty.appliedCount, 0);
+  });
 }

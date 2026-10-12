@@ -53,9 +53,20 @@ class PosRepository {
         .toList(growable: false);
   }
 
-  /// Chọn bảng giá cho đơn ([priceBookId] null = về giá gốc) — máy chủ tính lại mọi món trong đơn.
-  Future<OrderDetail> setPriceBook(int orderId, int? priceBookId) async =>
-      OrderDetail.fromJson(await api.patch('orders/$orderId', {'price_book_id': priceBookId}));
+  /// Bảng giá + khuyến mãi đang chọn ở Sơ đồ bàn (dùng chung mọi máy) và các lựa chọn có hiệu lực hôm nay.
+  Future<ShopOffers> offers() async => ShopOffers.fromJson(await api.get('offers'));
+
+  /// Chọn ở Sơ đồ bàn (null = bỏ): máy chủ áp ngay cho mọi đơn đang mở và bàn mở sau.
+  Future<ShopOffers> setOffers({int? priceBookId, int? discountId}) async =>
+      ShopOffers.fromJson(await api.post('offers', {'price_book_id': priceBookId, 'discount_id': discountId}));
+
+  /// Bỏ bảng giá cho riêng đơn này — mọi món về giá gốc (chọn bảng giá làm ở Sơ đồ bàn).
+  Future<OrderDetail> removePriceBook(int orderId) async =>
+      OrderDetail.fromJson(await api.patch('orders/$orderId', {'price_book_id': null}));
+
+  /// Bỏ khuyến mãi cho riêng đơn này.
+  Future<OrderDetail> removeDiscount(int orderId) async =>
+      OrderDetail.fromJson(await api.patch('orders/$orderId', {'discount_id': null}));
 
   Future<OrderDetail> addItem(int orderId, int productId, {int qty = 1, String? note}) async =>
       OrderDetail.fromJson(await api.post('orders/$orderId/items', {
