@@ -95,7 +95,6 @@ class Tickets {
       TicketBoxSplit(order.tableId == null ? 'Mang đi' : order.tableName, [
         'Số HĐ: ${order.orderNo}',
         'Thời gian: ${formatDateTime(paid ? order.paidAt : null)}',
-        if ((order.priceBookName ?? '').isNotEmpty) 'Bảng giá: ${order.priceBookName}',
       ], note: !paid && (order.note ?? '').isNotEmpty ? 'Ghi chú: ${order.note}' : null),
       const TicketDivider(),
       const TicketColumns(['Tên món', 'Đ.Giá', 'SL', 'Tiền'], flex: flex, aligns: aligns, bold: true),

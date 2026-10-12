@@ -3,7 +3,8 @@ import 'package:leno_pos/models/models.dart';
 import 'package:leno_pos/printing/ticket.dart';
 import 'package:leno_pos/printing/tickets.dart';
 
-/// Bảng giá: đọc dữ liệu máy chủ (GET /price-books, đơn / món kèm giá gốc) và in giá cũ / giá mới trên hóa đơn.
+/// Bảng giá: đọc dữ liệu máy chủ (GET /price-books, đơn / món kèm giá gốc) và in giá cũ / giá mới trên hóa đơn
+/// (không in tên bảng giá).
 void main() {
   test('price book and order fields parse from the API', () {
     final book = PriceBook.fromJson({'id': 3, 'name': 'Giá cuối tuần', 'prices': {'77': 12000, '82': 11000.0}});
@@ -30,7 +31,7 @@ void main() {
     expect(legacy.hasOffer, isFalse);
   });
 
-  test('bill shows the price book, struck original prices and the amount saved', () {
+  test('bill shows struck original prices and the amount saved, not the price book name', () {
     OrderItem item(int id, String name, double price, double? original, int qty) => OrderItem(
           id: id, productId: id, productName: name, image: null, qty: qty, notifiedQty: qty, price: price,
           amount: price * qty, note: null, notifiedNote: null, status: 'ACTIVE', pending: false, originalPrice: original,
@@ -53,7 +54,7 @@ void main() {
     final lines = Tickets.bill(detail, const ReceiptInfo(shopName: 'Leno')).lines;
 
     final header = lines.whereType<TicketBoxSplit>().single;
-    expect(header.lines, contains('Bảng giá: Giá cuối tuần'));
+    expect(header.lines.any((l) => l.startsWith('Bảng giá')), isFalse, reason: 'không in tên bảng giá trên hóa đơn');
 
     final struck = lines.whereType<TicketColumns>().where((c) => c.strike).map((c) => c.cells[1]).toList();
     expect(struck, ['15.000', '10.000'], reason: 'giá gốc gạch ngang dưới các món bán theo bảng giá');
