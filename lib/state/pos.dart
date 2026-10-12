@@ -62,6 +62,11 @@ final activeOrdersProvider = FutureProvider.autoDispose<List<OrderSummary>>(
 /// Thực đơn: giữ trong suốt phiên đăng nhập, kéo xuống để tải lại.
 final menuProvider = FutureProvider<List<MenuCategory>>((ref) => ref.watch(posRepositoryProvider).menu());
 
+/// Bảng giá có hiệu lực hôm nay — tải lại mỗi lần mở màn hình đơn (bảng giá theo ngày / thứ).
+final priceBooksProvider = FutureProvider.autoDispose<List<PriceBook>>(
+  (ref) => ref.watch(posRepositoryProvider).priceBooks(),
+);
+
 /// Một đơn đang mở. Mọi thao tác chạy tuần tự (bấm nhanh nhiều món không bị đè kết quả)
 /// và thay state bằng đơn mới nhất máy chủ trả về. Lỗi ném ra cho màn hình hiện thông báo.
 final orderProvider =
@@ -106,6 +111,9 @@ class OrderController extends AutoDisposeFamilyAsyncNotifier<OrderDetail, int> {
   Future<OrderDetail> removeItem(OrderItem item) => _run(() => _repo.removeItem(arg, item.id));
 
   Future<OrderDetail> setNote(String? note) => _run(() => _repo.setOrderNote(arg, note));
+
+  /// Chọn / đổi / bỏ bảng giá ([priceBookId] null = giá gốc); mọi món được tính lại.
+  Future<OrderDetail> setPriceBook(int? priceBookId) => _run(() => _repo.setPriceBook(arg, priceBookId));
 
   Future<OrderDetail> notifyKitchen() => _run(() => _repo.notifyKitchen(arg));
 

@@ -99,17 +99,25 @@ final menu = <MenuCategory>[
 ];
 
 OrderItem item(int id, int productId, String name, int qty, double price,
-        {int notified = 0, String? note, String status = 'ACTIVE', bool? pending}) =>
+        {int notified = 0, String? note, String status = 'ACTIVE', bool? pending, double? original}) =>
     OrderItem(
       id: id, productId: productId, productName: name, image: null, qty: qty, notifiedQty: notified,
       price: price, amount: price * qty, note: note, notifiedNote: notified > 0 ? note : null, status: status,
-      pending: pending ?? (qty != notified),
+      pending: pending ?? (qty != notified), originalPrice: original,
     );
 
-OrderDetail order({bool paid = false}) {
+/// Bảng giá mẫu: cà phê sữa đá 18k -> 14k, trà sữa 30k -> 24k.
+const priceBook = PriceBook(id: 6, name: 'Giảm 20% nước uống', prices: {102: 14000, 201: 24000, 202: 25600});
+
+/// [book] = đơn đang bán theo [priceBook].
+OrderDetail order({bool paid = false, bool book = false}) {
   final items = [
-    item(1, 102, 'Cà phê sữa đá', 2, 18000, notified: 2, note: 'Ít đá'),
-    item(2, 201, 'Trà sữa trân châu đường đen', 1, 30000, notified: 1),
+    book
+        ? item(1, 102, 'Cà phê sữa đá', 2, 14000, notified: 2, note: 'Ít đá', original: 18000)
+        : item(1, 102, 'Cà phê sữa đá', 2, 18000, notified: 2, note: 'Ít đá'),
+    book
+        ? item(2, 201, 'Trà sữa trân châu đường đen', 1, 24000, notified: 1, original: 30000)
+        : item(2, 201, 'Trà sữa trân châu đường đen', 1, 30000, notified: 1),
     item(3, 401, 'Khoai tây chiên', 1, 25000),
     item(4, 301, 'Trà đào cam sả', 3, 28000, note: 'Không đường'),
   ];
@@ -119,6 +127,7 @@ OrderDetail order({bool paid = false}) {
       id: 83, orderNo: 'ORD${_ymd()}-0192B', orderType: 'DINE_IN', status: paid ? 'PAID' : 'OPEN', note: 'Khách VIP',
       tableId: 3, tableName: 'Bàn 3', tableNote: 'Gần cửa sổ', createdByName: 'Nguyễn Thị Lan', subtotal: total,
       discountAmount: 0, vatAmount: 0, totalAmount: total, createdAt: _ago(27), paidAt: paid ? _ago(0) : null,
+      priceBookId: book ? priceBook.id : null, priceBookName: book ? priceBook.name : null,
     ),
     isActive: !paid,
     items: items,
@@ -139,6 +148,8 @@ class FakeRepo extends PosRepository {
   Future<List<MenuCategory>> menu() async => menu_;
   @override
   Future<OrderDetail> order(int orderId) async => order_();
+  @override
+  Future<List<PriceBook>> priceBooks() async => const [priceBook];
   @override
   Future<OrderHistory> orderHistory({String? date}) async => OrderHistory(
         date: '2026-10-07',
@@ -186,7 +197,9 @@ class FakeRepo extends PosRepository {
 
 final tables_ = tables;
 final menu_ = menu;
-OrderDetail order_() => order();
+/// Đơn màn hình đơn dùng — bật [useBook] để chụp đơn bán theo bảng giá.
+var useBook = false;
+OrderDetail order_() => order(book: useBook);
 
 class FakeAuth extends AuthController {
   @override
@@ -289,6 +302,15 @@ void main() {
     });
   }
 
+  testWidgets('order with price book', (tester) async {
+    useBook = true;
+    addTearDown(() => useBook = false);
+    await shoot(tester, 'order_pricebook_tablet_landscape', sizes['tablet_landscape']!, const OrderScreen(orderId: 83));
+    await shoot(tester, 'order_pricebook_phone_items', sizes['phone']!, const OrderScreen(orderId: 83),
+        interact: () => tester.tap(find.textContaining('Món đã gọi')));
+    addTearDown(tester.view.reset);
+  });
+
   testWidgets('order phone - ordered tab', (tester) async {
     await shoot(tester, 'order_phone_items', sizes['phone']!, const OrderScreen(orderId: 83),
         interact: () => tester.tap(find.textContaining('Món đã gọi')));
@@ -376,6 +398,7 @@ void main() {
     final tickets = <String, (Ticket, int)>{
       'ticket_kitchen_80mm': (Tickets.kitchen(slip, o, station: 'Quầy bar'), 576),
       'ticket_provisional_80mm': (Tickets.bill(order(), receipt, bankQr: bankQr), 576),
+      'ticket_pricebook_80mm': (Tickets.bill(order(book: true), receipt), 576),
       'ticket_provisional_58mm': (Tickets.bill(order(), receipt, bankQr: bankQr), 384),
       'ticket_receipt_80mm': (Tickets.bill(order(paid: true), receipt), 576),
       'ticket_receipt_58mm': (Tickets.bill(order(paid: true), receipt), 384),

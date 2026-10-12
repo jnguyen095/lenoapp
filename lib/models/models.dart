@@ -282,6 +282,8 @@ class Order {
     required this.totalAmount,
     required this.createdAt,
     required this.paidAt,
+    this.priceBookId,
+    this.priceBookName,
   });
 
   factory Order.fromJson(Map<String, dynamic> j) => Order(
@@ -300,6 +302,8 @@ class Order {
         totalAmount: _money(j['total_amount']),
         createdAt: _str(j['created_at']),
         paidAt: _str(j['paid_at']),
+        priceBookId: _intOrNull(j['price_book_id']),
+        priceBookName: _str(j['price_book_name']),
       );
 
   final int id;
@@ -317,6 +321,10 @@ class Order {
   final double totalAmount;
   final String? createdAt;
   final String? paidAt;
+
+  /// Bảng giá người bán chọn cho đơn (null = giá gốc); tên lưu lại để in hóa đơn.
+  final int? priceBookId;
+  final String? priceBookName;
 }
 
 class OrderItem {
@@ -333,6 +341,7 @@ class OrderItem {
     required this.notifiedNote,
     required this.status,
     required this.pending,
+    this.originalPrice,
   });
 
   factory OrderItem.fromJson(Map<String, dynamic> j) => OrderItem(
@@ -348,6 +357,7 @@ class OrderItem {
         notifiedNote: _str(j['notified_note']),
         status: j['status'] as String,
         pending: j['pending'] == true,
+        originalPrice: j['original_price'] == null ? null : _money(j['original_price']),
       );
 
   final int id;
@@ -365,7 +375,35 @@ class OrderItem {
   /// Còn phần chưa báo bếp (món mới, đổi số lượng, đổi ghi chú).
   final bool pending;
 
+  /// Giá gốc khi bán theo bảng giá (null = bán đúng giá gốc) — hiện gạch ngang cạnh giá mới.
+  final double? originalPrice;
+
   bool get isCancelled => status == Status.cancelled;
+
+  /// Bán theo bảng giá với giá khác giá gốc.
+  bool get hasOffer => originalPrice != null && originalPrice != price;
+}
+
+/// Bảng giá có hiệu lực hôm nay (GET /price-books): người bán tự chọn cho đơn, không tự áp.
+class PriceBook {
+  const PriceBook({required this.id, required this.name, required this.prices});
+
+  factory PriceBook.fromJson(Map<String, dynamic> j) => PriceBook(
+        id: _int(j['id']),
+        name: j['name'] as String,
+        prices: {
+          for (final e in ((j['prices'] as Map?) ?? const {}).entries) int.parse('${e.key}'): _money(e.value),
+        },
+      );
+
+  final int id;
+  final String name;
+
+  /// product_id => giá mới; món không có = giữ giá gốc.
+  final Map<int, double> prices;
+
+  /// Giá bán của [p] theo bảng giá này.
+  double priceOf(Product p) => prices[p.id] ?? p.price;
 }
 
 class Payment {

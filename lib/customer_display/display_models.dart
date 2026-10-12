@@ -119,7 +119,8 @@ class DisplayContent {
 enum DisplayState { idle, order, paying, thanks }
 
 class DisplayLine {
-  const DisplayLine({required this.name, required this.qty, required this.price, required this.amount, this.note});
+  const DisplayLine(
+      {required this.name, required this.qty, required this.price, required this.amount, this.note, this.originalPrice});
 
   factory DisplayLine.fromJson(Map<String, dynamic> j) => DisplayLine(
         name: j['name'] as String,
@@ -127,6 +128,7 @@ class DisplayLine {
         price: (j['price'] as num).toDouble(),
         amount: (j['amount'] as num).toDouble(),
         note: j['note'] as String?,
+        originalPrice: (j['original_price'] as num?)?.toDouble(),
       );
 
   final String name;
@@ -135,7 +137,11 @@ class DisplayLine {
   final double amount;
   final String? note;
 
-  Map<String, dynamic> toJson() => {'name': name, 'qty': qty, 'price': price, 'amount': amount, 'note': note};
+  /// Giá gốc khi bán theo bảng giá (null = giá gốc) — khách thấy giá cũ gạch ngang.
+  final double? originalPrice;
+
+  Map<String, dynamic> toJson() =>
+      {'name': name, 'qty': qty, 'price': price, 'amount': amount, 'note': note, 'original_price': originalPrice};
 }
 
 /// Những gì khách đang thấy. Không chứa tên nhân viên hay thông tin nội bộ.

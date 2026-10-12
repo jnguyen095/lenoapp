@@ -49,7 +49,7 @@ class TicketBoxSplit extends TicketLine {
 /// [aligns] = canh lề từng cột. Ô dài tự xuống dòng trong cột của nó.
 class TicketColumns extends TicketLine {
   const TicketColumns(this.cells,
-      {required this.flex, required this.aligns, this.notes, this.scale = 1, this.bold = false});
+      {required this.flex, required this.aligns, this.notes, this.scale = 1, this.bold = false, this.strike = false});
 
   final List<String> cells;
 
@@ -59,6 +59,9 @@ class TicketColumns extends TicketLine {
   final List<TextAlign> aligns;
   final double scale;
   final bool bold;
+
+  /// Gạch ngang chữ (vd giá gốc khi bán theo bảng giá).
+  final bool strike;
 }
 
 /// Mã QR canh giữa, cạnh = [widthFraction] bề rộng giấy (vd mã VietQR chuyển khoản).
@@ -71,6 +74,13 @@ class TicketQr extends TicketLine {
 
 class TicketDivider extends TicketLine {
   const TicketDivider();
+}
+
+/// Đường kẻ liền mảnh ngăn các món (phiếu bếp) — mảnh và sát hơn [TicketDivider] (đường gạch ngăn khối).
+class TicketRule extends TicketLine {
+  const TicketRule({this.thickness = 1.5});
+
+  final double thickness;
 }
 
 class TicketSpace extends TicketLine {
@@ -100,7 +110,12 @@ class TicketRenderer {
   static const _white = Color(0xFFFFFFFF);
 
   TextPainter _painter(String text,
-      {required double scale, bool bold = false, bool italic = false, TextAlign align = TextAlign.left, String? italicSuffix}) {
+      {required double scale,
+      bool bold = false,
+      bool italic = false,
+      bool strike = false,
+      TextAlign align = TextAlign.left,
+      String? italicSuffix}) {
     TextStyle style({required bool italic}) => TextStyle(
           color: _black,
           fontFamily: fontFamily,
@@ -108,6 +123,9 @@ class TicketRenderer {
           height: 1.25,
           fontWeight: bold ? FontWeight.w700 : FontWeight.w400,
           fontStyle: italic ? FontStyle.italic : FontStyle.normal,
+          decoration: strike ? TextDecoration.lineThrough : TextDecoration.none,
+          decorationColor: _black,
+          decorationThickness: 2,
         );
     return TextPainter(
       text: TextSpan(
@@ -191,7 +209,7 @@ class TicketRenderer {
           final painters = [
             for (var i = 0; i < line.cells.length; i++)
               _painter(line.cells[i],
-                  scale: line.scale, bold: line.bold, align: line.aligns[i], italicSuffix: line.notes?[i])
+                  scale: line.scale, bold: line.bold, strike: line.strike, align: line.aligns[i], italicSuffix: line.notes?[i])
                 ..layout(minWidth: widths[i], maxWidth: widths[i]),
           ];
           final h = painters.fold<double>(0, (m, p) => p.height > m ? p.height : m);
@@ -241,6 +259,21 @@ class TicketRenderer {
               for (var x = _padding; x < widthDots - _padding; x += 12) {
                 c.drawLine(Offset(x, y), Offset(x + 7, y), paint);
               }
+            },
+          ));
+        case TicketRule():
+          final h = _baseSize * 0.5;
+          ops.add((
+            h,
+            (c, top) {
+              final y = top + h / 2;
+              c.drawLine(
+                Offset(_padding, y),
+                Offset(widthDots - _padding, y),
+                Paint()
+                  ..color = _black
+                  ..strokeWidth = line.thickness,
+              );
             },
           ));
         case TicketSpace():

@@ -45,6 +45,18 @@ class PosRepository {
   Future<OrderDetail> setOrderNote(int orderId, String? note) async =>
       OrderDetail.fromJson(await api.patch('orders/$orderId', {'note': note}));
 
+  /// Bảng giá có hiệu lực hôm nay (đang bật, trong khoảng ngày, đúng thứ) kèm giá từng món.
+  Future<List<PriceBook>> priceBooks() async {
+    final res = await api.get('price-books');
+    return (res['price_books'] as List)
+        .map((b) => PriceBook.fromJson(b as Map<String, dynamic>))
+        .toList(growable: false);
+  }
+
+  /// Chọn bảng giá cho đơn ([priceBookId] null = về giá gốc) — máy chủ tính lại mọi món trong đơn.
+  Future<OrderDetail> setPriceBook(int orderId, int? priceBookId) async =>
+      OrderDetail.fromJson(await api.patch('orders/$orderId', {'price_book_id': priceBookId}));
+
   Future<OrderDetail> addItem(int orderId, int productId, {int qty = 1, String? note}) async =>
       OrderDetail.fromJson(await api.post('orders/$orderId/items', {
         'items': [

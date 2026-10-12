@@ -35,6 +35,11 @@ class _MenuPanelState extends ConsumerState<MenuPanel> {
   Widget build(BuildContext context) {
     final menuAsync = ref.watch(menuProvider);
     final layout = Layout.of(context);
+    // Bảng giá đơn đang dùng (nếu có): thẻ món hiện giá mới kèm giá gốc gạch ngang.
+    final bookId = widget.detail.order.priceBookId;
+    final book = bookId == null
+        ? null
+        : ref.watch(priceBooksProvider).valueOrNull?.where((b) => b.id == bookId).firstOrNull;
 
     return menuAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -101,6 +106,7 @@ class _MenuPanelState extends ConsumerState<MenuPanel> {
                             final p = products[i];
                             return ProductTile(
                               product: p,
+                              offerPrice: book?.prices[p.id],
                               qtyInOrder: widget.detail.qtyOfProduct(p.id),
                               onTap: () => widget.onAdd(p),
                               onLongPress: () => widget.onAddWithOptions(p),
@@ -140,9 +146,13 @@ class ProductTile extends ConsumerWidget {
     required this.qtyInOrder,
     required this.onTap,
     required this.onLongPress,
+    this.offerPrice,
   });
 
   final Product product;
+
+  /// Giá theo bảng giá đơn đang dùng (null = giá gốc).
+  final double? offerPrice;
   final int qtyInOrder;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
@@ -193,8 +203,20 @@ class ProductTile extends ConsumerWidget {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
                         decoration: BoxDecoration(color: scheme.primary, borderRadius: BorderRadius.circular(14)),
-                        child: Text(
-                          formatMoney(product.price),
+                        child: Text.rich(
+                          TextSpan(children: [
+                            if (offerPrice != null && offerPrice != product.price)
+                              TextSpan(
+                                text: '${formatMoney(product.price, withUnit: false)} ',
+                                style: TextStyle(
+                                  decoration: TextDecoration.lineThrough,
+                                  decorationColor: scheme.onPrimary,
+                                  fontSize: 11,
+                                  color: scheme.onPrimary.withValues(alpha: 0.75),
+                                ),
+                              ),
+                            TextSpan(text: formatMoney(offerPrice ?? product.price)),
+                          ]),
                           style: theme.textTheme.titleSmall?.copyWith(color: scheme.onPrimary, fontWeight: FontWeight.w500),
                         ),
                       ),

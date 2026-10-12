@@ -336,7 +336,23 @@ class _LineRow extends StatelessWidget {
                 Text(line.name, style: TextStyle(fontSize: 3.6 * u)),
                 if ((line.note ?? '').isNotEmpty)
                   Text(line.note!, style: TextStyle(fontSize: 2.8 * u, color: _muted, fontStyle: FontStyle.italic)),
-                Text(formatMoney(line.price), style: TextStyle(fontSize: 2.6 * u, color: _muted)),
+                // Bán theo bảng giá: giá cũ gạch ngang trước giá mới.
+                Text.rich(
+                  TextSpan(children: [
+                    if (line.originalPrice != null)
+                      TextSpan(
+                        text: '${formatMoney(line.originalPrice!)}  ',
+                        style: const TextStyle(decoration: TextDecoration.lineThrough),
+                      ),
+                    TextSpan(
+                      text: formatMoney(line.price),
+                      style: line.originalPrice != null && line.price < line.originalPrice!
+                          ? TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.w600)
+                          : null,
+                    ),
+                  ]),
+                  style: TextStyle(fontSize: 2.6 * u, color: _muted),
+                ),
               ],
             ),
           ),

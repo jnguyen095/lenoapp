@@ -32,27 +32,31 @@ class Tickets {
       const TicketDivider(),
     ];
 
-    if (slip.send.isNotEmpty) {
-      lines.add(header);
-      for (final l in slip.send) {
-        lines.add(row(l.productName, l.qty, note: l.note));
+    // Mỗi món một hàng, kẻ đường liền giữa các món (đậm hơn dưới tiêu đề) cho bếp dễ đọc, tránh nhầm.
+    void table(List<TicketColumns> rows) {
+      lines
+        ..add(header)
+        ..add(const TicketRule(thickness: 2.5));
+      for (var i = 0; i < rows.length; i++) {
+        if (i > 0) lines.add(const TicketRule());
+        lines.add(rows[i]);
       }
+    }
+
+    if (slip.send.isNotEmpty) {
+      table([for (final l in slip.send) row(l.productName, l.qty, note: l.note)]);
     }
     if (slip.changed.isNotEmpty) {
       if (slip.send.isNotEmpty) lines.add(const TicketDivider());
       lines.add(const TicketText('ĐỔI GHI CHÚ', bold: true));
-      lines.add(header);
-      for (final l in slip.changed) {
-        lines.add(row(l.productName, l.qty, note: (l.note ?? '').isEmpty ? 'bỏ ghi chú' : l.note));
-      }
+      table([
+        for (final l in slip.changed) row(l.productName, l.qty, note: (l.note ?? '').isEmpty ? 'bỏ ghi chú' : l.note),
+      ]);
     }
     if (slip.cancel.isNotEmpty) {
       if (slip.send.isNotEmpty || slip.changed.isNotEmpty) lines.add(const TicketDivider());
       lines.add(const TicketText('HỦY MÓN', bold: true));
-      lines.add(header);
-      for (final l in slip.cancel) {
-        lines.add(row(l.productName, l.qty));
-      }
+      table([for (final l in slip.cancel) row(l.productName, l.qty)]);
     }
     return Ticket(lines);
   }
@@ -66,6 +70,9 @@ class Tickets {
     final items = detail.items.where((i) => !i.isCancelled);
     final payment = detail.payment;
     String money(double v) => formatMoney(v, withUnit: false);
+    // Bảng giá: tổng tiền khách được giảm so với giá gốc (món bị tăng giá không tính) — giống web.
+    final saved = items.fold<double>(
+        0, (s, it) => it.hasOffer && it.originalPrice! > it.price ? s + (it.originalPrice! - it.price) * it.qty : s);
 
     // Bảng món 4 cột: Tên món | Đ.Giá | SL | Tiền.
     const flex = [46.0, 21.0, 9.0, 24.0];
@@ -87,10 +94,11 @@ class Tickets {
       TicketBoxSplit(order.tableId == null ? 'Mang đi' : order.tableName, [
         'Số HĐ: ${order.orderNo}',
         'Thời gian: ${formatDateTime(paid ? order.paidAt : null)}',
+        if ((order.priceBookName ?? '').isNotEmpty) 'Bảng giá: ${order.priceBookName}',
       ], note: !paid && (order.note ?? '').isNotEmpty ? 'Ghi chú: ${order.note}' : null),
       const TicketDivider(),
       const TicketColumns(['Tên món', 'Đ.Giá', 'SL', 'Tiền'], flex: flex, aligns: aligns, bold: true),
-      for (final it in items)
+      for (final it in items) ...[
         TicketColumns(
           [it.productName, money(it.price), '${it.qty}', money(it.amount)],
           // Phiếu tạm tính: ghi chú món in nghiêng sau tên món (hóa đơn đã thanh toán thì không in).
@@ -98,11 +106,16 @@ class Tickets {
           flex: flex,
           aligns: aligns,
         ),
+        // Giá gốc gạch ngang ngay dưới giá mới.
+        if (it.hasOffer)
+          TicketColumns(['', money(it.originalPrice!), '', ''], flex: flex, aligns: aligns, scale: 0.85, strike: true),
+      ],
       const TicketDivider(),
       TicketRow('Tạm tính', money(order.subtotal)),
       TicketRow('Chiết khấu', order.discountAmount > 0 ? '-${money(order.discountAmount)}' : '0'),
       if (order.vatAmount > 0) TicketRow('VAT', money(order.vatAmount)),
       TicketRow('TỔNG CỘNG', money(order.totalAmount), bold: true),
+      if (saved > 0) TicketRow('Bạn đã tiết kiệm', money(saved)),
       if (showQr) ...[
         const TicketSpace(0.4),
         TicketQr(buildVietQr(

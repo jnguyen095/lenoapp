@@ -245,6 +245,7 @@ class CustomerDisplayController extends Notifier<CustomerDisplayState> {
             price: it.price,
             amount: it.amount,
             note: showNotes ? it.note : null,
+            originalPrice: it.hasOffer ? it.originalPrice : null,
           ),
       ],
       subtotal: d.order.subtotal,

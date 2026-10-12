@@ -38,9 +38,10 @@ class _FakeAuth extends AuthController {
 }
 
 OrderDetail _order({int id = 7, String status = 'OPEN', Payment? payment}) {
-  OrderItem item(int itemId, String name, int qty, double price, {String? note, String st = 'ACTIVE'}) => OrderItem(
+  OrderItem item(int itemId, String name, int qty, double price, {String? note, String st = 'ACTIVE', double? original}) =>
+      OrderItem(
         id: itemId, productId: itemId, productName: name, image: null, qty: qty, notifiedQty: 0, price: price,
-        amount: price * qty, note: note, notifiedNote: null, status: st, pending: true,
+        amount: price * qty, note: note, notifiedNote: null, status: st, pending: true, originalPrice: original,
       );
   return OrderDetail(
     order: Order(
@@ -51,7 +52,7 @@ OrderDetail _order({int id = 7, String status = 'OPEN', Payment? payment}) {
     isActive: status == 'OPEN',
     items: [
       item(1, 'Cà phê sữa đá', 2, 18000, note: 'Ít đá'),
-      item(2, 'Trà đào', 1, 28000),
+      item(2, 'Trà đào', 1, 28000, original: 35000), // bán theo bảng giá
       item(3, 'Món đã hủy', 1, 99000, st: 'CANCELLED'),
     ],
     pendingCount: 2,
@@ -94,6 +95,15 @@ void main() {
     expect(s.lines.first.note, isNull);
     expect(s.itemCount, 3);
     expect(s.total, 64000);
+  });
+
+  test('price book: the customer sees the original price struck next to the new one', () async {
+    final c = await setUpController();
+    c.showOrder(_order());
+    final lines = bridge.snapshots.last.lines;
+    expect(lines[0].originalPrice, isNull);
+    expect(lines[1].originalPrice, 35000);
+    expect(DisplayLine.fromJson(lines[1].toJson()).originalPrice, 35000);
   });
 
   test('order snapshot shows notes when enabled on web', () async {

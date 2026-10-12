@@ -37,6 +37,9 @@ class OrderPanel extends StatelessWidget {
       if ((order.tableNote ?? '').isNotEmpty)
         _Banner(icon: Icons.table_restaurant, text: 'Ghi chú bàn: ${order.tableNote}'),
       if ((order.note ?? '').isNotEmpty) _Banner(icon: Icons.sticky_note_2_outlined, text: 'Ghi chú đơn: ${order.note}'),
+      // Đơn đã đóng: bảng giá đã dùng (đơn đang mở chọn ở thanh Bảng giá).
+      if (!detail.isActive && (order.priceBookName ?? '').isNotEmpty)
+        _Banner(icon: Icons.sell_outlined, text: 'Bảng giá: ${order.priceBookName}'),
     ];
 
     if (detail.items.isEmpty) {
@@ -144,8 +147,25 @@ class _ItemRow extends StatelessWidget {
       runSpacing: 2,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        Text(
-          editable ? formatMoney(item.price) : '${item.qty} × ${formatMoney(item.price)}',
+        // Bán theo bảng giá: giá gốc gạch ngang + giá mới (xanh = giảm, cam = tăng) — giống web.
+        Text.rich(
+          TextSpan(children: [
+            if (!editable) TextSpan(text: '${item.qty} × '),
+            if (item.hasOffer)
+              TextSpan(
+                text: '${formatMoney(item.originalPrice!)} ',
+                style: TextStyle(decoration: TextDecoration.lineThrough, color: scheme.outline),
+              ),
+            TextSpan(
+              text: formatMoney(item.price),
+              style: item.hasOffer
+                  ? TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: item.price < item.originalPrice! ? Colors.green.shade700 : Colors.orange.shade800,
+                    )
+                  : null,
+            ),
+          ]),
           style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
         ),
         if (item.isCancelled)

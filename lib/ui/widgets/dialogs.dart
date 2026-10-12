@@ -136,18 +136,21 @@ class _QuickNoteChips extends StatelessWidget {
   }
 }
 
-/// Thêm món kèm số lượng và ghi chú (nhấn giữ món trên thực đơn).
-Future<({int qty, String? note})?> showAddProductDialog(BuildContext context, Product product) {
+/// Thêm món kèm số lượng và ghi chú (nhấn giữ món trên thực đơn). [price] = giá theo bảng giá đơn đang dùng.
+Future<({int qty, String? note})?> showAddProductDialog(BuildContext context, Product product, {double? price}) {
   return showDialog<({int qty, String? note})>(
     context: context,
-    builder: (context) => _AddProductDialog(product: product),
+    builder: (context) => _AddProductDialog(product: product, price: price ?? product.price),
   );
 }
 
 class _AddProductDialog extends StatefulWidget {
-  const _AddProductDialog({required this.product});
+  const _AddProductDialog({required this.product, required this.price});
 
   final Product product;
+
+  /// Giá bán (theo bảng giá đơn đang dùng, không có thì giá gốc).
+  final double price;
 
   @override
   State<_AddProductDialog> createState() => _AddProductDialogState();
@@ -179,7 +182,17 @@ class _AddProductDialogState extends State<_AddProductDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(formatMoney(widget.product.price), style: theme.textTheme.titleMedium),
+            Text.rich(
+              TextSpan(children: [
+                if (widget.price != widget.product.price)
+                  TextSpan(
+                    text: '${formatMoney(widget.product.price)}  ',
+                    style: TextStyle(decoration: TextDecoration.lineThrough, color: theme.colorScheme.outline),
+                  ),
+                TextSpan(text: formatMoney(widget.price)),
+              ]),
+              style: theme.textTheme.titleMedium,
+            ),
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -210,7 +223,7 @@ class _AddProductDialogState extends State<_AddProductDialog> {
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Thôi')),
         FilledButton(
           onPressed: _submit,
-          child: Text('Thêm · ${formatMoney(widget.product.price * _qty)}'),
+          child: Text('Thêm · ${formatMoney(widget.price * _qty)}'),
         ),
       ],
     );
