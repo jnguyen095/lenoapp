@@ -80,12 +80,13 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
             _Filter.open => history.orders.where((o) => o.isActive).toList(),
             _Filter.paid => history.orders.where((o) => o.isPaid).toList(),
           }.where((o) => _matches(o, _query)).toList();
+          final narrow = MediaQuery.sizeOf(context).width < 600;
 
           return RefreshIndicator(
             onRefresh: () => ref.refresh(orderHistoryProvider.future),
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
               children: [
                 Center(
                   child: ConstrainedBox(
@@ -93,78 +94,70 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        // Tổng kết gọn: số đơn, đã thanh toán, đang phục vụ + tiền theo hình thức trong một thẻ.
+                        _SummaryCard(history: history),
+                        const SizedBox(height: 8),
+                        // Ô tìm + bộ lọc trên cùng một hàng.
                         Row(
                           children: [
                             Expanded(
-                              child: _StatCard(
-                                label: 'Số đơn',
-                                value: '${history.orders.length}',
-                                icon: Icons.receipt_long,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _StatCard(
-                                label: 'Đã thanh toán (${history.paidCount})',
-                                value: formatMoney(history.paidTotal),
-                                icon: Icons.check_circle_outline,
-                                highlight: true,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: _StatCard(
-                                label: 'Đang phục vụ (${history.openCount})',
-                                value: formatMoney(history.openTotal),
-                                icon: Icons.room_service_outlined,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        _MethodTotals(totals: history.byMethod),
-                        const SizedBox(height: 14),
-                        // Tìm đơn: số HĐ, tên bàn, ghi chú.
-                        TextField(
-                          controller: _search,
-                          textInputAction: TextInputAction.search,
-                          onChanged: (v) => setState(() => _query = v),
-                          decoration: InputDecoration(
-                            hintText: 'Tìm theo số HĐ, tên bàn, ghi chú (vd: 0192, ban 3)',
-                            prefixIcon: const Icon(Icons.search),
-                            isDense: true,
-                            filled: true,
-                            fillColor: theme.colorScheme.surfaceContainerHigh,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
-                            suffixIcon: _query.isEmpty
-                                ? null
-                                : IconButton(
-                                    tooltip: 'Xoá',
-                                    icon: const Icon(Icons.clear),
-                                    onPressed: () {
-                                      _search.clear();
-                                      setState(() => _query = '');
-                                    },
+                              child: SizedBox(
+                                height: 40,
+                                child: TextField(
+                                  controller: _search,
+                                  textInputAction: TextInputAction.search,
+                                  onChanged: (v) => setState(() => _query = v),
+                                  style: theme.textTheme.bodyMedium,
+                                  decoration: InputDecoration(
+                                    hintText: narrow ? 'Tìm số HĐ, bàn…' : 'Tìm theo số HĐ, tên bàn, ghi chú (vd: 0192, ban 3)',
+                                    prefixIcon: const Icon(Icons.search, size: 20),
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                                    filled: true,
+                                    fillColor: theme.colorScheme.surfaceContainerHigh,
+                                    border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                                    suffixIcon: _query.isEmpty
+                                        ? null
+                                        : IconButton(
+                                            tooltip: 'Xoá',
+                                            iconSize: 18,
+                                            icon: const Icon(Icons.clear),
+                                            onPressed: () {
+                                              _search.clear();
+                                              setState(() => _query = '');
+                                            },
+                                          ),
                                   ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          children: [
-                            for (final (f, label) in [
-                              (_Filter.all, 'Tất cả (${history.orders.length})'),
-                              (_Filter.open, 'Đang phục vụ (${history.openCount})'),
-                              (_Filter.paid, 'Đã thanh toán (${history.paidCount})'),
-                            ])
-                              ChoiceChip(
-                                label: Text(label),
-                                selected: _filter == f,
-                                onSelected: (_) => setState(() => _filter = f),
+                                ),
                               ),
+                            ),
+                            const SizedBox(width: 8),
+                            SegmentedButton<_Filter>(
+                              showSelectedIcon: false,
+                              style: SegmentedButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                textStyle: theme.textTheme.labelMedium,
+                              ),
+                              segments: [
+                                ButtonSegment(
+                                    value: _Filter.all,
+                                    label: Text(narrow ? 'Tất cả ${history.orders.length}' : 'Tất cả (${history.orders.length})')),
+                                ButtonSegment(
+                                    value: _Filter.open,
+                                    label: Text(narrow ? 'Phục vụ ${history.openCount}' : 'Đang phục vụ (${history.openCount})')),
+                                ButtonSegment(
+                                    value: _Filter.paid,
+                                    label: Text(narrow ? 'Đã TT ${history.paidCount}' : 'Đã thanh toán (${history.paidCount})')),
+                              ],
+                              selected: {_filter},
+                              onSelectionChanged: (s) => setState(() => _filter = s.first),
+                            ),
                           ],
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 8),
                         if (shown.isEmpty)
                           Padding(
                             padding: const EdgeInsets.symmetric(vertical: 64),
@@ -211,51 +204,6 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
     if (d == null) return date;
     String two(int n) => n.toString().padLeft(2, '0');
     return '${two(d.day)}/${two(d.month)}/${d.year}';
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  const _StatCard({required this.label, required this.value, required this.icon, this.highlight = false});
-
-  final String label;
-  final String value;
-  final IconData icon;
-  final bool highlight;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final fg = highlight ? scheme.onPrimary : scheme.onSurface;
-    return Card(
-      elevation: 0,
-      color: highlight ? scheme.primary : scheme.surfaceContainerLow,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(icon, size: 16, color: fg),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(label,
-                      maxLines: 2, style: theme.textTheme.labelMedium?.copyWith(color: fg, height: 1.2)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(value, style: theme.textTheme.titleLarge?.copyWith(color: fg, fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 
@@ -307,19 +255,17 @@ class _OrderTile extends StatelessWidget {
   }
 }
 
-/// Tiền đã thu theo hình thức: Tiền mặt và Chuyển khoản luôn hiện; Thẻ / QR chỉ hiện khi có đơn.
-class _MethodTotals extends StatelessWidget {
-  const _MethodTotals({required this.totals});
 
-  final List<MethodTotal> totals;
+/// Tổng kết gọn trong một thẻ: Số đơn · Đã thanh toán · Đang phục vụ, dưới là tiền theo hình thức
+/// (Tiền mặt, Chuyển khoản luôn hiện; hình thức cũ chỉ hiện khi có đơn).
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({required this.history});
 
-  static const _alwaysShown = {'CASH', 'TRANSFER'};
+  final OrderHistory history;
 
   static IconData _icon(String method) => switch (method) {
         'CASH' => Icons.payments_outlined,
         'TRANSFER' => Icons.account_balance_outlined,
-        'CARD' => Icons.credit_card,
-        'QR' => Icons.qr_code_2,
         _ => Icons.attach_money,
       };
 
@@ -327,53 +273,66 @@ class _MethodTotals extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final shown = totals.where((t) => _alwaysShown.contains(t.method) || t.count > 0).toList();
-    if (shown.isEmpty) return const SizedBox.shrink();
+    final methods =
+        history.byMethod.where((t) => t.method == 'CASH' || t.method == 'TRANSFER' || t.count > 0).toList();
+
+    Widget stat(String label, String value, {Color? color}) => Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant)),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(value, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, color: color)),
+              ),
+            ],
+          ),
+        );
 
     return Card(
       elevation: 0,
+      margin: EdgeInsets.zero,
       color: scheme.surfaceContainerLow,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Đã thu theo hình thức', style: theme.textTheme.labelLarge?.copyWith(color: scheme.onSurfaceVariant)),
-            const SizedBox(height: 8),
             Row(
               children: [
-                for (final t in shown) ...[
-                  Expanded(
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 18,
-                          backgroundColor: scheme.primaryContainer,
-                          child: Icon(_icon(t.method), size: 20, color: scheme.primary),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('${t.label} (${t.count})',
-                                  maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.labelMedium),
-                              FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.centerLeft,
-                                child: Text(formatMoney(t.total),
-                                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (t != shown.last) const SizedBox(width: 12),
-                ],
+                stat('Số đơn', '${history.orders.length}'),
+                stat('Đã thanh toán (${history.paidCount})', formatMoney(history.paidTotal), color: scheme.primary),
+                stat('Đang phục vụ (${history.openCount})', formatMoney(history.openTotal),
+                    color: history.openCount > 0 ? Colors.orange.shade800 : null),
               ],
             ),
+            if (methods.isNotEmpty) ...[
+              const Divider(height: 12),
+              Row(
+                children: [
+                  for (final t in methods)
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Icon(_icon(t.method), size: 16, color: scheme.primary),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text('${t.label} (${t.count})',
+                                maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodySmall),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(formatMoney(t.total),
+                              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                          const SizedBox(width: 8),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
