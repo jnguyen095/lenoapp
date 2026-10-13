@@ -136,7 +136,7 @@ void main() {
     container.dispose();
 
     c = await setUpController(config: const DisplayConfig(showQr: false));
-    c.startPaying(_order(), PaymentMethod.qr);
+    c.startPaying(_order(), PaymentMethod.transfer);
     expect(bridge.snapshots.last.state, DisplayState.order);
   });
 

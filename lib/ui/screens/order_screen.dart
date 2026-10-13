@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
+import '../../core/format.dart';
 import '../../customer_display/customer_display_controller.dart';
 import '../../models/models.dart';
+import '../../state/auth.dart';
 import '../../state/pos.dart';
 import '../../state/printing.dart';
 import '../layout.dart';
@@ -39,9 +41,13 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
   // Màn hình khách: lấy sẵn để còn dùng được trong dispose().
   late final CustomerDisplayController _display = ref.read(customerDisplayProvider.notifier);
 
+  // Rời màn hình đơn (về sơ đồ bàn hoặc chuyển sang bàn khác) -> làm mới tiền trên sơ đồ bàn ngay.
+  late final ProviderContainer _container;
+
   @override
   void initState() {
     super.initState();
+    _container = ProviderScope.containerOf(context, listen: false);
     // Đơn mở / thay đổi (thêm, bớt món, máy khác sửa) -> cập nhật màn hình khách.
     ref.listenManual(orderProvider(widget.orderId), (_, next) {
       final detail = next.valueOrNull;
@@ -52,6 +58,7 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
   @override
   void dispose() {
     _display.leaveOrder(widget.orderId);
+    if (_container.exists(tablesProvider)) _container.read(tablesProvider.notifier).refreshSilently();
     _searchCtrl.dispose();
     _searchFocus.dispose();
     super.dispose();
@@ -87,6 +94,18 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
     final result = await showAddProductDialog(context, p, price: book?.priceOf(p));
     if (result == null) return;
     await _act(() => _order.addProduct(p, qty: result.qty, note: result.note));
+  }
+
+  /// Chuyển sang đơn của bàn khác (thay màn hình này, Quay lại vẫn về sơ đồ bàn).
+  void _switchTo(OrderSummary other) {
+    if (other.id == widget.orderId) return;
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder<void>(
+        pageBuilder: (_, _, _) => OrderScreen(orderId: other.id),
+        transitionDuration: const Duration(milliseconds: 150),
+        transitionsBuilder: (_, anim, _, child) => FadeTransition(opacity: anim, child: child),
+      ),
+    );
   }
 
   void _setQty(OrderItem item, int qty) => _act(() => _order.setQty(item, qty));
@@ -184,12 +203,13 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
       return;
     }
 
-    // Màn hình khách: bảng thanh toán mở với Tiền mặt; chọn Chuyển khoản/QR thì hiện mã VietQR cho khách.
+    // Màn hình khách: bảng thanh toán mở với Tiền mặt; chọn Chuyển khoản thì hiện mã VietQR cho khách.
     _display.startPaying(latest, PaymentMethod.cash);
     final input = await showPaymentSheet(
       context,
       total: latest.order.totalAmount,
       title: latest.order.tableName,
+      bankQr: ref.read(shopSettingsProvider)?.bankQr,
       onMethodChanged: (m) => _display.startPaying(latest, m),
     );
     if (input == null || !mounted) {
@@ -288,13 +308,24 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
     final menu = MenuPanel(detail: detail, onAdd: _add, onAddWithOptions: _addWithOptions, query: _query);
     final searching = showMenu;
 
-    final nameColumn = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(order.tableName, maxLines: 1, overflow: TextOverflow.ellipsis),
-        Text('${order.orderNo} · ${Status.orderLabel(order.status)}',
-            maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodySmall),
-      ],
+    // Tên bàn + mũi tên: bấm để chuyển sang bàn đang phục vụ khác mà không phải về sơ đồ bàn.
+    final nameColumn = _TableSwitcher(
+      current: order,
+      onSwitch: _switchTo,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(child: Text(order.tableName, maxLines: 1, overflow: TextOverflow.ellipsis)),
+              const Icon(Icons.arrow_drop_down),
+            ],
+          ),
+          Text('${order.orderNo} · ${Status.orderLabel(order.status)}',
+              maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodySmall),
+        ],
+      ),
     );
     final appBarTitle = !searching
         ? nameColumn
@@ -487,3 +518,163 @@ class _SearchField extends StatelessWidget {
   }
 }
 
+
+/// Tên bàn trên thanh tiêu đề màn hình đơn: bấm mở danh sách bàn đang phục vụ để chuyển sang đơn khác ngay
+/// (không phải về sơ đồ bàn). Mở bàn mới vẫn làm ở sơ đồ bàn — mục cuối danh sách đưa về đó.
+class _TableSwitcher extends ConsumerStatefulWidget {
+  const _TableSwitcher({required this.current, required this.onSwitch, required this.child});
+
+  final Order current;
+  final ValueChanged<OrderSummary> onSwitch;
+  final Widget child;
+
+  @override
+  ConsumerState<_TableSwitcher> createState() => _TableSwitcherState();
+}
+
+class _TableSwitcherState extends ConsumerState<_TableSwitcher> {
+  bool _loading = false;
+
+  /// "Mang đi" trước, rồi theo số bàn (Bàn 2 trước Bàn 10).
+  static int _compare(OrderSummary a, OrderSummary b) {
+    if ((a.tableId == null) != (b.tableId == null)) return a.tableId == null ? -1 : 1;
+    int? num(String? s) => int.tryParse(RegExp(r'\d+').firstMatch(s ?? '')?.group(0) ?? '');
+    final na = num(a.tableName), nb = num(b.tableName);
+    if (na != null && nb != null && na != nb) return na.compareTo(nb);
+    return (a.tableName ?? '').compareTo(b.tableName ?? '');
+  }
+
+  Future<void> _open() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    final canTables = ref.read(authProvider).valueOrNull?.user.canTables ?? true;
+    List<OrderSummary> orders;
+    try {
+      // Luôn lấy mới: máy khác / web có thể vừa mở hoặc đóng bàn. Có quyền sơ đồ bàn: đúng các bàn đang có khách
+      // trên sơ đồ (không lẫn đơn cũ còn mở mà bàn đã trống); không thì danh sách đơn đang phục vụ.
+      if (canTables) {
+        final tables = await ref.read(posRepositoryProvider).tables();
+        orders = [
+          for (final t in tables)
+            if (!t.isAvailable && t.order != null)
+              OrderSummary(
+                id: t.order!.id,
+                orderNo: t.order!.orderNo,
+                status: t.order!.status,
+                totalAmount: t.order!.totalAmount,
+                tableId: t.isTakeaway ? null : t.id,
+                tableName: t.name,
+              ),
+        ];
+        if (ref.exists(tablesProvider)) ref.read(tablesProvider.notifier).refreshSilently();
+      } else {
+        orders = [...await ref.refresh(activeOrdersProvider.future)];
+      }
+      orders.sort(_compare);
+    } catch (e) {
+      if (mounted) showError(context, e);
+      return;
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+    if (!mounted) return;
+
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final box = context.findRenderObject()! as RenderBox;
+    final overlay = Overlay.of(context).context.findRenderObject()! as RenderBox;
+    final topLeft = box.localToGlobal(Offset(0, box.size.height + 4), ancestor: overlay);
+    final others = orders.where((o) => o.id != widget.current.id).length;
+
+    // -1 = về sơ đồ bàn để mở bàn mới.
+    final picked = await showMenu<int>(
+      context: context,
+      position: RelativeRect.fromLTRB(topLeft.dx, topLeft.dy, overlay.size.width - topLeft.dx, 0),
+      constraints: const BoxConstraints(minWidth: 280, maxWidth: 360),
+      items: [
+        PopupMenuItem<int>(
+          enabled: false,
+          height: 32,
+          child: Text('BÀN ĐANG PHỤC VỤ',
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: scheme.outline, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+        ),
+        for (final o in orders)
+          PopupMenuItem<int>(
+            value: o.id,
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 28,
+                  child: o.id == widget.current.id ? Icon(Icons.check, size: 20, color: scheme.primary) : null,
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        o.tableName ?? 'Mang đi',
+                        style: TextStyle(
+                          fontWeight: o.id == widget.current.id ? FontWeight.w700 : FontWeight.w500,
+                          color: o.id == widget.current.id ? scheme.primary : null,
+                        ),
+                      ),
+                      if (o.status != Status.open)
+                        Text(Status.orderLabel(o.status),
+                            style: theme.textTheme.labelSmall?.copyWith(color: Colors.orange.shade800)),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(formatMoney(o.totalAmount), style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
+              ],
+            ),
+          ),
+        if (others == 0)
+          const PopupMenuItem<int>(enabled: false, child: Text('Không có bàn nào khác đang phục vụ.')),
+        const PopupMenuDivider(),
+        PopupMenuItem<int>(
+          value: -1,
+          child: Row(
+            children: [
+              SizedBox(width: 28, child: Icon(canTables ? Icons.add : Icons.list_alt, size: 20, color: scheme.primary)),
+              Expanded(
+                child: Text(canTables ? 'Mở bàn mới — về sơ đồ bàn' : 'Về danh sách đơn',
+                    style: TextStyle(color: scheme.primary, fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+    if (!mounted || picked == null) return;
+    if (picked == -1) {
+      Navigator.of(context).pop();
+      return;
+    }
+    final target = orders.where((o) => o.id == picked).firstOrNull;
+    if (target != null) widget.onSwitch(target);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: _open,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(child: widget.child),
+            if (_loading) ...[
+              const SizedBox(width: 6),
+              const SizedBox.square(dimension: 14, child: CircularProgressIndicator(strokeWidth: 2)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}

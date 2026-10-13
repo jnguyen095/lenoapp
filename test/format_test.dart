@@ -22,9 +22,11 @@ void main() {
     expect(ApiClient.normalizeServerUrl(' http://192.168.1.10/leno// '), 'http://192.168.1.10/leno');
   });
 
-  test('suggestedCash rounds up to common notes', () {
-    expect(suggestedCash(38000), [38000, 40000, 50000, 100000, 200000, 500000]);
-    expect(suggestedCash(50000).first, 50000);
+  test('cash suggestions round up to notes, like the web', () {
+    expect(cashSuggestions(120000), [150000, 200000, 500000]);
+    expect(cashSuggestions(216000), [220000, 250000, 300000, 500000]);
+    expect(cashSuggestions(500000), [600000, 1000000]);
+    expect(cashSuggestions(38000), [40000, 50000, 100000, 500000]);
   });
 
   test('OrderDetail parses API payload', () {

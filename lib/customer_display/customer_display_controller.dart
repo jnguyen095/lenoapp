@@ -163,11 +163,11 @@ class CustomerDisplayController extends Notifier<CustomerDisplayState> {
     }
   }
 
-  /// Đang chọn hình thức thanh toán: chuyển khoản/QR thì hiện mã VietQR, còn lại hiện danh sách món.
+  /// Đang chọn hình thức thanh toán: chuyển khoản thì hiện mã VietQR, tiền mặt hiện danh sách món.
   void startPaying(OrderDetail detail, PaymentMethod method) {
     _lastOrder = detail;
     final bank = ref.read(shopSettingsProvider)?.bankQr;
-    final wantsQr = method == PaymentMethod.transfer || method == PaymentMethod.qr;
+    final wantsQr = method == PaymentMethod.transfer;
     if (!wantsQr || bank == null || !bank.enabled || !state.content.config.showQr || detail.order.totalAmount <= 0) {
       _show(_orderSnapshot(detail));
       return;

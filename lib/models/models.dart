@@ -638,11 +638,10 @@ class OrderDetail {
 }
 
 /// Phương thức thanh toán (khớp Pos_service::PAYMENT_METHODS).
+/// Hình thức thanh toán — chỉ Tiền mặt và Chuyển khoản (giống web, máy chủ từ chối mã khác).
 enum PaymentMethod {
   cash('CASH', 'Tiền mặt'),
-  transfer('TRANSFER', 'Chuyển khoản'),
-  card('CARD', 'Thẻ'),
-  qr('QR', 'QR Pay');
+  transfer('TRANSFER', 'Chuyển khoản');
 
   const PaymentMethod(this.code, this.label);
 

@@ -35,6 +35,7 @@ import 'package:leno_pos/ui/screens/order_screen.dart';
 import 'package:leno_pos/ui/screens/printer_edit_screen.dart';
 import 'package:leno_pos/ui/screens/printer_settings_screen.dart';
 import 'package:leno_pos/ui/screens/store_settings_screen.dart';
+import 'package:leno_pos/ui/widgets/payment_sheet.dart';
 import 'package:leno_pos/ui/widgets/top_toast.dart';
 
 const outDir = 'build/screenshots';
@@ -163,6 +164,12 @@ class FakeRepo extends PosRepository {
   Future<List<MenuCategory>> menu() async => menu_;
   @override
   Future<OrderDetail> order(int orderId) async => order_();
+  @override
+  Future<List<OrderSummary>> activeOrders() async => [
+        for (final t in tables_.where((t) => t.order != null))
+          OrderSummary(id: t.order!.id, orderNo: t.order!.orderNo, status: t.order!.status, totalAmount: t.order!.totalAmount,
+              tableId: t.isTakeaway ? null : t.id, tableName: t.name),
+      ];
   @override
   Future<List<PriceBook>> priceBooks() async => const [priceBook];
   @override
@@ -333,6 +340,29 @@ void main() {
     useDiscount = 3; // chưa đủ đơn tối thiểu
     await shoot(tester, 'order_discount_waiting_phone', sizes['phone']!, const OrderScreen(orderId: 83),
         interact: () => tester.tap(find.textContaining('Món đã gọi')));
+    addTearDown(tester.view.reset);
+  });
+
+  testWidgets('order table switcher', (tester) async {
+    await shoot(tester, 'order_switch_table_tablet_landscape', sizes['tablet_landscape']!, const OrderScreen(orderId: 83),
+        interact: () => tester.tap(find.byIcon(Icons.arrow_drop_down)));
+    addTearDown(tester.view.reset);
+  });
+
+  testWidgets('payment sheet', (tester) async {
+    Future<void> open() async {
+      showPaymentSheet(tester.element(find.byType(Scaffold).first), total: 216000, title: 'Bàn 3', bankQr: bankQr);
+      await tester.pumpAndSettle();
+    }
+
+    await shoot(tester, 'pay_cash_tablet_portrait', sizes['tablet_portrait']!, const Scaffold(), interact: () async {
+      await open();
+      await tester.tap(find.text('250.000'));
+    });
+    await shoot(tester, 'pay_transfer_phone', sizes['phone']!, const Scaffold(), interact: () async {
+      await open();
+      await tester.tap(find.text('Chuyển khoản'));
+    });
     addTearDown(tester.view.reset);
   });
 
