@@ -220,27 +220,41 @@ class _OfferAction extends StatelessWidget {
 
 /// Trang đơn — bảng giá / khuyến mãi của đơn (chọn ở Sơ đồ bàn) dạng thẻ, ✕ để bỏ cho riêng đơn này (giống web).
 /// Chỉ hiện khi đơn có bảng giá hoặc khuyến mãi.
-class OrderOfferChips extends StatelessWidget {
+class OrderOfferChips extends ConsumerWidget {
   const OrderOfferChips({
     super.key,
     required this.order,
+    required this.active,
     required this.editable,
     required this.onRemovePriceBook,
     required this.onRemoveDiscount,
+    required this.onReapplyPriceBook,
+    required this.onReapplyDiscount,
   });
 
   final Order order;
 
-  /// Đơn đang mở và không bận -> hiện nút ✕.
+  /// Đơn đang mở (đơn đã đóng chỉ xem, không gợi ý áp lại).
+  final bool active;
+
+  /// Đơn đang mở và không bận -> hiện nút ✕ / ↻.
   final bool editable;
   final VoidCallback onRemovePriceBook;
   final VoidCallback onRemoveDiscount;
 
+  /// Áp lại lựa chọn đang có ở Sơ đồ bàn (id) cho đơn đã bỏ.
+  final ValueChanged<int> onReapplyPriceBook;
+  final ValueChanged<int> onReapplyDiscount;
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final hasBook = order.priceBookId != null || (order.priceBookName ?? '').isNotEmpty;
     final hasDisc = order.hasDiscount;
-    if (!hasBook && !hasDisc) return const SizedBox.shrink();
+    // Đơn đã bỏ mà Sơ đồ bàn đang chọn -> cho áp lại (chỉ đơn đang mở).
+    final shop = active ? ref.watch(shopOffersProvider).valueOrNull : null;
+    final reBookId = !hasBook ? shop?.priceBookId : null;
+    final reDiscount = !hasDisc ? shop?.discount : null;
+    if (!hasBook && !hasDisc && reBookId == null && reDiscount == null) return const SizedBox.shrink();
 
     final scheme = Theme.of(context).colorScheme;
     final shortOf = order.discountShortOf;
@@ -258,6 +272,8 @@ class OrderOfferChips extends StatelessWidget {
                 label: 'Bảng giá',
                 value: hasBook ? (order.priceBookName ?? 'Bảng giá') : 'Giá gốc',
                 tone: hasBook ? _ChipTone.on : _ChipTone.none,
+                note: !hasBook && reBookId != null ? 'Đã bỏ · Sơ đồ bàn: ${shop!.priceBookName ?? ''}' : null,
+                onReapply: !hasBook && reBookId != null && editable ? () => onReapplyPriceBook(reBookId) : null,
                 onRemove: hasBook && editable
                     ? () async {
                         if (await confirmDialog(context,
@@ -276,11 +292,12 @@ class OrderOfferChips extends StatelessWidget {
                 value: hasDisc ? (order.discountName ?? 'Khuyến mãi') : 'Không áp dụng',
                 // Chưa đủ đơn tối thiểu: còn thiếu bao nhiêu; đủ rồi: đã giảm bao nhiêu.
                 note: !hasDisc
-                    ? null
+                    ? (reDiscount != null ? 'Đã bỏ · Sơ đồ bàn: ${reDiscount.name}' : null)
                     : shortOf > 0
                         ? 'Mua thêm ${formatMoney(shortOf)} để được giảm'
                         : 'Đã giảm ${formatMoney(order.discountAmount)}',
                 tone: !hasDisc ? _ChipTone.none : (shortOf > 0 ? _ChipTone.wait : _ChipTone.discount),
+                onReapply: reDiscount != null && editable ? () => onReapplyDiscount(reDiscount.id) : null,
                 onRemove: hasDisc && editable
                     ? () async {
                         if (await confirmDialog(context,
@@ -308,6 +325,7 @@ class _OfferChip extends StatelessWidget {
     required this.tone,
     this.note,
     this.onRemove,
+    this.onReapply,
   });
 
   final IconData icon;
@@ -316,6 +334,9 @@ class _OfferChip extends StatelessWidget {
   final String? note;
   final _ChipTone tone;
   final VoidCallback? onRemove;
+
+  /// Đơn đã bỏ, Sơ đồ bàn đang chọn -> nút ↻ áp lại.
+  final VoidCallback? onReapply;
 
   @override
   Widget build(BuildContext context) {
@@ -369,6 +390,14 @@ class _OfferChip extends StatelessWidget {
               style: IconButton.styleFrom(backgroundColor: Colors.black.withValues(alpha: 0.05)),
               iconSize: 16,
               icon: const Icon(Icons.close),
+            )
+          else if (onReapply != null)
+            IconButton.filledTonal(
+              onPressed: onReapply,
+              tooltip: 'Áp dụng lại cho đơn này',
+              visualDensity: VisualDensity.compact,
+              iconSize: 18,
+              icon: const Icon(Icons.replay),
             )
           else
             const SizedBox(width: 6),

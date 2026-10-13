@@ -108,6 +108,72 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
     );
   }
 
+  // ---- Chuyển bàn / gộp bàn ngay trên màn hình đơn (giống nhấn giữ bàn ở sơ đồ bàn) ----
+
+  Future<List<PosTable>?> _loadTables() async {
+    try {
+      return await ref.read(posRepositoryProvider).tables();
+    } catch (e) {
+      if (mounted) showError(context, e);
+      return null;
+    }
+  }
+
+  /// Chuyển khách của bàn này sang một bàn trống — đơn giữ nguyên, chỉ đổi bàn.
+  Future<void> _transferTable(Order order) async {
+    final tableId = order.tableId;
+    if (tableId == null) return;
+    final tables = await _loadTables();
+    if (tables == null || !mounted) return;
+    final target = await showPickerDialog<PosTable>(
+      context,
+      title: 'Chuyển ${order.tableName} sang…',
+      options: tables.where((t) => t.isAvailable && !t.isTakeaway && t.id != tableId).toList(),
+      label: (t) => t.name,
+      subtitle: (t) => '${t.capacity} chỗ',
+      emptyText: 'Không còn bàn trống.',
+    );
+    if (target == null || !mounted) return;
+    final ok = await _act(() async {
+      await ref.read(posRepositoryProvider).transferTable(tableId, target.id);
+      await _order.refresh(); // tên bàn mới
+      return true;
+    });
+    if (ok != null && mounted) showMessage(context, 'Đã chuyển ${order.tableName} sang ${target.name}.');
+  }
+
+  /// Gộp đơn của bàn này vào bàn khác đang phục vụ, rồi mở đơn của bàn đó.
+  Future<void> _mergeTable(Order order) async {
+    final tableId = order.tableId;
+    if (tableId == null) return;
+    final tables = await _loadTables();
+    if (tables == null || !mounted) return;
+    final target = await showPickerDialog<PosTable>(
+      context,
+      title: 'Gộp ${order.tableName} vào…',
+      options: tables.where((t) => !t.isAvailable && t.order != null && !t.isTakeaway && t.id != tableId).toList(),
+      label: (t) => t.name,
+      subtitle: (t) => formatMoney(t.order!.totalAmount),
+      emptyText: 'Không có bàn nào khác đang phục vụ.',
+    );
+    if (target == null || !mounted) return;
+    if (!await confirmDialog(context,
+        title: 'Gộp ${order.tableName} vào ${target.name}?',
+        message: 'Toàn bộ món của ${order.tableName} sẽ chuyển sang đơn của ${target.name}, ${order.tableName} trở về Trống.',
+        confirmLabel: 'Gộp bàn')) {
+      return;
+    }
+    final merged = await _act(() => ref.read(posRepositoryProvider).mergeTable(tableId, target.id));
+    if (merged == null || !mounted) return;
+    showMessage(context, 'Đã gộp ${order.tableName} vào ${target.name}.');
+    _switchTo(OrderSummary(
+      id: merged.order.id,
+      orderNo: merged.order.orderNo,
+      status: merged.order.status,
+      totalAmount: merged.order.totalAmount,
+    ));
+  }
+
   void _setQty(OrderItem item, int qty) => _act(() => _order.setQty(item, qty));
 
   /// Bỏ bảng giá / khuyến mãi cho riêng đơn này (chọn làm ở Sơ đồ bàn, áp cho mọi đơn đang mở).
@@ -281,9 +347,12 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
       children: [
         OrderOfferChips(
           order: order,
+          active: detail.isActive,
           editable: detail.isActive && _busy == 0,
           onRemovePriceBook: _removePriceBook,
           onRemoveDiscount: _removeDiscount,
+          onReapplyPriceBook: (id) => _act(() => _order.reapplyPriceBook(id)),
+          onReapplyDiscount: (id) => _act(() => _order.reapplyDiscount(id)),
         ),
         Expanded(
           child: RefreshIndicator(
@@ -327,7 +396,23 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
         ],
       ),
     );
-    final appBarTitle = !searching
+    // Chuyển / gộp bàn: đơn đang mở của bàn thường, người có quyền sơ đồ bàn.
+    final canMoveTable =
+        detail.isActive && order.tableId != null && (ref.watch(authProvider).valueOrNull?.user.canTables ?? false);
+    // Điện thoại: ô tìm món rộng hết màn hình ở đầu tab Thực đơn (thanh tiêu đề chỉ còn tên bàn).
+    final phoneSearch = Builder(
+      builder: (context) => Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+        child: _SearchField(
+          hint: 'Tìm món (vd: ca phe sua)',
+          controller: _searchCtrl,
+          focusNode: _searchFocus,
+          large: true,
+          onChanged: (v) => setState(() => _query = v),
+        ),
+      ),
+    );
+    final appBarTitle = !searching || !wide
         ? nameColumn
         : Row(
             children: [
@@ -370,6 +455,18 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
                   child: const ListTile(
                       contentPadding: EdgeInsets.zero, leading: Icon(Icons.history), title: Text('Lịch sử báo bếp')),
                 ),
+                if (canMoveTable) ...[
+                  PopupMenuItem(
+                    value: () => _transferTable(order),
+                    child: const ListTile(
+                        contentPadding: EdgeInsets.zero, leading: Icon(Icons.swap_horiz), title: Text('Chuyển bàn')),
+                  ),
+                  PopupMenuItem(
+                    value: () => _mergeTable(order),
+                    child: const ListTile(
+                        contentPadding: EdgeInsets.zero, leading: Icon(Icons.merge_type), title: Text('Gộp bàn')),
+                  ),
+                ],
                 PopupMenuItem(
                   value: _order.refresh,
                   child: const ListTile(contentPadding: EdgeInsets.zero, leading: Icon(Icons.refresh), title: Text('Tải lại')),
@@ -379,6 +476,33 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
             const AppMenuButton(),
           ]
         : <Widget>[
+      if (canMoveTable)
+        PopupMenuButton<VoidCallback>(
+          tooltip: 'Chuyển / gộp bàn',
+          icon: const Icon(Icons.swap_horiz),
+          enabled: _busy == 0,
+          onSelected: (action) => action(),
+          itemBuilder: (context) => [
+            PopupMenuItem(
+              value: () => _transferTable(order),
+              child: const ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.swap_horiz),
+                title: Text('Chuyển bàn'),
+                subtitle: Text('Chuyển khách sang một bàn trống'),
+              ),
+            ),
+            PopupMenuItem(
+              value: () => _mergeTable(order),
+              child: const ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.merge_type),
+                title: Text('Gộp bàn'),
+                subtitle: Text('Gộp đơn này vào bàn khác đang phục vụ'),
+              ),
+            ),
+          ],
+        ),
       if (detail.isActive)
         IconButton(
           tooltip: 'Ghi chú đơn',
@@ -462,7 +586,11 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
             ),
           ),
         ),
-        body: TabBarView(children: [menu, orderPanel]),
+        body: TabBarView(children: [
+          // Ô tìm món rộng hết màn hình ngay trên thực đơn.
+          Column(children: [phoneSearch, Expanded(child: menu)]),
+          orderPanel,
+        ]),
         bottomNavigationBar: summary,
       ),
     );
@@ -471,9 +599,18 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
 
 /// Ô tìm món trên thanh tiêu đề (không cần gõ dấu: "ca phe sua" ra "Cà phê sữa").
 class _SearchField extends StatelessWidget {
-  const _SearchField({required this.controller, required this.focusNode, required this.onChanged, required this.hint});
+  const _SearchField({
+    required this.controller,
+    required this.focusNode,
+    required this.onChanged,
+    required this.hint,
+    this.large = false,
+  });
 
   final String hint;
+
+  /// Ô to (điện thoại, rộng hết màn hình): cao hơn, chữ và biểu tượng to hơn cho dễ bấm.
+  final bool large;
 
   final TextEditingController controller;
   final FocusNode focusNode;
@@ -483,7 +620,7 @@ class _SearchField extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return SizedBox(
-      height: 44,
+      height: large ? 52 : 44,
       child: ListenableBuilder(
         listenable: controller,
         builder: (context, _) => TextField(
@@ -492,14 +629,14 @@ class _SearchField extends StatelessWidget {
           autofocus: false,
           textInputAction: TextInputAction.search,
           onChanged: onChanged,
-          style: Theme.of(context).textTheme.bodyLarge,
+          style: large ? Theme.of(context).textTheme.titleMedium : Theme.of(context).textTheme.bodyLarge,
           decoration: InputDecoration(
             hintText: hint,
             isDense: true,
             filled: true,
             fillColor: scheme.surfaceContainerHigh,
-            contentPadding: const EdgeInsets.symmetric(vertical: 10),
-            prefixIcon: const Icon(Icons.search, size: 20),
+            contentPadding: EdgeInsets.symmetric(vertical: large ? 14 : 10),
+            prefixIcon: Icon(Icons.search, size: large ? 24 : 20),
             suffixIcon: controller.text.isEmpty
                 ? null
                 : IconButton(
@@ -510,7 +647,7 @@ class _SearchField extends StatelessWidget {
                       onChanged('');
                     },
                   ),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide.none),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(large ? 26 : 22), borderSide: BorderSide.none),
           ),
         ),
       ),

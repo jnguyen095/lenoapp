@@ -134,6 +134,11 @@ class OrderController extends AutoDisposeFamilyAsyncNotifier<OrderDetail, int> {
   /// Bỏ khuyến mãi cho riêng đơn này.
   Future<OrderDetail> removeDiscount() => _run(() => _repo.removeDiscount(arg));
 
+  /// Áp lại bảng giá / khuyến mãi đang chọn ở Sơ đồ bàn (sau khi đã bỏ cho đơn này).
+  Future<OrderDetail> reapplyPriceBook(int id) => _run(() => _repo.reapplyPriceBook(arg, id));
+
+  Future<OrderDetail> reapplyDiscount(int id) => _run(() => _repo.reapplyDiscount(arg, id));
+
   Future<OrderDetail> notifyKitchen() => _run(() => _repo.notifyKitchen(arg));
 
   Future<OrderDetail> pay(PaymentMethod method, {double receivedAmount = 0}) =>

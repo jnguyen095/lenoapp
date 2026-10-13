@@ -20,6 +20,21 @@ class OrderHistoryScreen extends ConsumerStatefulWidget {
 
 class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
   _Filter _filter = _Filter.all;
+  final _search = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  /// Tìm theo số hóa đơn (gõ vài số cuối cũng được), tên bàn, ghi chú — không cần gõ dấu.
+  static bool _matches(HistoryOrder o, String query) {
+    final q = foldVietnamese(query.trim());
+    if (q.isEmpty) return true;
+    return [o.orderNo, o.tableName, o.note ?? ''].any((s) => foldVietnamese(s).contains(q));
+  }
 
   Future<void> _open(HistoryOrder o) async {
     await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => OrderScreen(orderId: o.id)));
@@ -64,7 +79,7 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
             _Filter.all => history.orders,
             _Filter.open => history.orders.where((o) => o.isActive).toList(),
             _Filter.paid => history.orders.where((o) => o.isPaid).toList(),
-          };
+          }.where((o) => _matches(o, _query)).toList();
 
           return RefreshIndicator(
             onRefresh: () => ref.refresh(orderHistoryProvider.future),
@@ -109,6 +124,31 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
                         const SizedBox(height: 10),
                         _MethodTotals(totals: history.byMethod),
                         const SizedBox(height: 14),
+                        // Tìm đơn: số HĐ, tên bàn, ghi chú.
+                        TextField(
+                          controller: _search,
+                          textInputAction: TextInputAction.search,
+                          onChanged: (v) => setState(() => _query = v),
+                          decoration: InputDecoration(
+                            hintText: 'Tìm theo số HĐ, tên bàn, ghi chú (vd: 0192, ban 3)',
+                            prefixIcon: const Icon(Icons.search),
+                            isDense: true,
+                            filled: true,
+                            fillColor: theme.colorScheme.surfaceContainerHigh,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
+                            suffixIcon: _query.isEmpty
+                                ? null
+                                : IconButton(
+                                    tooltip: 'Xoá',
+                                    icon: const Icon(Icons.clear),
+                                    onPressed: () {
+                                      _search.clear();
+                                      setState(() => _query = '');
+                                    },
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
                         Wrap(
                           spacing: 8,
                           children: [
@@ -133,7 +173,9 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
                                 Icon(Icons.receipt_long_outlined, size: 48, color: theme.colorScheme.outline),
                                 const SizedBox(height: 12),
                                 Text(
-                                  history.orders.isEmpty ? 'Hôm nay bạn chưa tạo đơn nào.' : 'Không có đơn nào.',
+                                  history.orders.isEmpty
+                                      ? 'Hôm nay bạn chưa tạo đơn nào.'
+                                      : (_query.trim().isNotEmpty ? 'Không tìm thấy đơn "${_query.trim()}".' : 'Không có đơn nào.'),
                                   style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                                 ),
                               ],

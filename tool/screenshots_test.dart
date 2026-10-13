@@ -34,6 +34,8 @@ import 'package:leno_pos/ui/screens/order_history_screen.dart';
 import 'package:leno_pos/ui/screens/order_screen.dart';
 import 'package:leno_pos/ui/screens/printer_edit_screen.dart';
 import 'package:leno_pos/ui/screens/printer_settings_screen.dart';
+import 'package:leno_pos/ui/screens/shift_report_screen.dart';
+import 'package:leno_pos/ui/widgets/change_password_dialog.dart';
 import 'package:leno_pos/ui/screens/store_settings_screen.dart';
 import 'package:leno_pos/ui/widgets/payment_sheet.dart';
 import 'package:leno_pos/ui/widgets/top_toast.dart';
@@ -176,6 +178,15 @@ class FakeRepo extends PosRepository {
   Future<ShopOffers> offers() async => ShopOffers(
         priceBookId: priceBook.id, priceBookName: priceBook.name, discount: discounts_.first,
         priceBooks: const [priceBook], discounts: discounts_);
+  @override
+  Future<ShiftReport> shiftReport() async => const ShiftReport(
+        fullname: 'Nguyễn Thị Lan', username: 'lan', from: '2026-10-13 07:02:11', to: '2026-10-13 17:30:00',
+        loginAt: '2026-10-13 07:02:11', orderCount: 12, paidCount: 10, openCount: 1, openTotal: 45000, cancelledCount: 1,
+        paymentCount: 10, paymentTotal: 1250000,
+        byMethod: [
+          MethodTotal(method: 'CASH', label: 'Tiền mặt', count: 7, total: 850000),
+          MethodTotal(method: 'TRANSFER', label: 'Chuyển khoản', count: 3, total: 400000),
+        ]);
   @override
   Future<OrderHistory> orderHistory({String? date}) async => OrderHistory(
         date: '2026-10-07',
@@ -349,6 +360,24 @@ void main() {
     addTearDown(tester.view.reset);
   });
 
+  testWidgets('new screens', (tester) async {
+    await shoot(tester, 'shift_report_phone', sizes['phone']!, const ShiftReportScreen());
+    await shoot(tester, 'order_phone_search', sizes['phone']!, const OrderScreen(orderId: 83));
+    await shoot(tester, 'history_search_phone', sizes['phone']!, const OrderHistoryScreen(),
+        interact: () => tester.enterText(find.byType(TextField), '019'));
+    await shoot(tester, 'change_password_phone', sizes['phone']!, const Scaffold(), interact: () async {
+      showChangePasswordDialog(tester.element(find.byType(Scaffold).first));
+      await tester.pumpAndSettle();
+    });
+    addTearDown(tester.view.reset);
+  });
+
+  testWidgets('order chip reapply', (tester) async {
+    useBook = false; // đơn đã bỏ bảng giá, Sơ đồ bàn đang chọn -> nút áp lại
+    await shoot(tester, 'order_reapply_tablet_landscape', sizes['tablet_landscape']!, const OrderScreen(orderId: 83));
+    addTearDown(tester.view.reset);
+  });
+
   testWidgets('payment sheet', (tester) async {
     Future<void> open() async {
       showPaymentSheet(tester.element(find.byType(Scaffold).first), total: 216000, title: 'Bàn 3', bankQr: bankQr);
@@ -460,6 +489,13 @@ void main() {
       'ticket_kitchen_80mm': (Tickets.kitchen(slip, o, station: 'Quầy bar'), 576),
       'ticket_provisional_80mm': (Tickets.bill(order(), receipt, bankQr: bankQr), 576),
       'ticket_pricebook_80mm': (Tickets.bill(order(book: true, discountId: 2), receipt), 576),
+      'ticket_shift_report_80mm': (Tickets.shiftReport(const ShiftReport(
+          fullname: 'Nguyễn Thị Lan', username: 'lan', from: '2026-10-13 07:02:11', to: '2026-10-13 17:30:00',
+          orderCount: 12, paidCount: 10, openCount: 1, openTotal: 45000, cancelledCount: 1, paymentCount: 10, paymentTotal: 1250000,
+          byMethod: [
+            MethodTotal(method: 'CASH', label: 'Tiền mặt', count: 7, total: 850000),
+            MethodTotal(method: 'TRANSFER', label: 'Chuyển khoản', count: 3, total: 400000),
+          ]), receipt, printedAt: DateTime(2026, 10, 13, 17, 31)), 576),
       'ticket_provisional_58mm': (Tickets.bill(order(), receipt, bankQr: bankQr), 384),
       'ticket_receipt_80mm': (Tickets.bill(order(paid: true), receipt), 576),
       'ticket_receipt_58mm': (Tickets.bill(order(paid: true), receipt), 384),

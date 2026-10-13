@@ -712,6 +712,75 @@ class MethodTotal {
   final double total;
 }
 
+/// Báo cáo cuối ngày (GET /reports/shift) của người đang đăng nhập: từ lúc đăng nhập trên máy này (hoặc 00:00 hôm nay)
+/// tới lúc xem — số đơn đã tạo theo trạng thái và tiền đã thu theo hình thức.
+class ShiftReport {
+  const ShiftReport({
+    required this.fullname,
+    required this.username,
+    required this.from,
+    required this.to,
+    this.loginAt,
+    this.deviceName,
+    this.orderCount = 0,
+    this.paidCount = 0,
+    this.openCount = 0,
+    this.openTotal = 0,
+    this.cancelledCount = 0,
+    this.paymentCount = 0,
+    this.paymentTotal = 0,
+    this.byMethod = const [],
+  });
+
+  factory ShiftReport.fromJson(Map<String, dynamic> j) {
+    final user = j['user'] as Map<String, dynamic>;
+    final orders = (j['orders'] as Map<String, dynamic>?) ?? const {};
+    final payments = (j['payments'] as Map<String, dynamic>?) ?? const {};
+    return ShiftReport(
+      fullname: (user['fullname'] as String?) ?? '',
+      username: (user['username'] as String?) ?? '',
+      from: j['from'] as String,
+      to: j['to'] as String,
+      loginAt: _str(j['login_at']),
+      deviceName: _str(j['device_name']),
+      orderCount: _intOrNull(orders['count']) ?? 0,
+      paidCount: _intOrNull(orders['paid_count']) ?? 0,
+      openCount: _intOrNull(orders['open_count']) ?? 0,
+      openTotal: _money(orders['open_total']),
+      cancelledCount: _intOrNull(orders['cancelled_count']) ?? 0,
+      paymentCount: _intOrNull(payments['count']) ?? 0,
+      paymentTotal: _money(payments['total']),
+      byMethod: [
+        for (final m in (payments['by_method'] as List?) ?? const []) MethodTotal.fromJson(m as Map<String, dynamic>),
+      ],
+    );
+  }
+
+  final String fullname;
+  final String username;
+
+  /// "Y-m-d H:i:s" theo giờ máy chủ.
+  final String from;
+  final String to;
+  final String? loginAt;
+  final String? deviceName;
+
+  /// Đơn người này tạo trong khoảng (không tính đơn chưa có món).
+  final int orderCount;
+  final int paidCount;
+  final int openCount;
+  final double openTotal;
+  final int cancelledCount;
+
+  /// Tiền người này đã thu (thanh toán do người này xác nhận).
+  final int paymentCount;
+  final double paymentTotal;
+  final List<MethodTotal> byMethod;
+
+  double totalOf(String method) => byMethod.where((m) => m.method == method).firstOrNull?.total ?? 0;
+  int countOf(String method) => byMethod.where((m) => m.method == method).firstOrNull?.count ?? 0;
+}
+
 /// Đơn do người đang đăng nhập tạo trong một ngày + tổng kết.
 class OrderHistory {
   const OrderHistory({

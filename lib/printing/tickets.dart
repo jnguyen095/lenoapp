@@ -141,6 +141,35 @@ class Tickets {
     ]);
   }
 
+  /// Báo cáo cuối ngày của nhân viên: từ lúc đăng nhập tới lúc in — số đơn, tiền mặt, chuyển khoản, đơn huỷ.
+  static Ticket shiftReport(ShiftReport r, ReceiptInfo receipt, {DateTime? printedAt}) {
+    String money(double v) => formatMoney(v, withUnit: false);
+    final cash = r.totalOf(PaymentMethod.cash.code);
+    final transfer = r.totalOf(PaymentMethod.transfer.code);
+    return Ticket([
+      if (receipt.shopName.isNotEmpty) TicketText(receipt.shopName, align: TextAlign.center, scale: 1.3, bold: true),
+      const TicketText('BÁO CÁO CUỐI NGÀY', align: TextAlign.center, scale: 1.2, bold: true),
+      const TicketDivider(),
+      TicketRow('Nhân viên', r.fullname.isEmpty ? r.username : r.fullname),
+      TicketRow('Từ', formatDateTime(r.from)),
+      TicketRow('Đến', formatDateTime(r.to)),
+      const TicketDivider(),
+      TicketRow('Số đơn', '${r.orderCount}', bold: true),
+      TicketRow('  Đã thanh toán', '${r.paidCount}'),
+      if (r.openCount > 0) TicketRow('  Đang phục vụ', '${r.openCount} · ${money(r.openTotal)}'),
+      TicketRow('  Đã huỷ', '${r.cancelledCount}'),
+      const TicketDivider(),
+      TicketRow('Tiền mặt (${r.countOf(PaymentMethod.cash.code)})', money(cash)),
+      TicketRow('Chuyển khoản (${r.countOf(PaymentMethod.transfer.code)})', money(transfer)),
+      TicketRow('TỔNG THU', money(r.paymentTotal), bold: true),
+      const TicketDivider(),
+      TicketText('In lúc ${formatDateTime(printedAt?.toIso8601String())}', align: TextAlign.center),
+      const TicketSpace(1.5),
+      const TicketRow('Nhân viên ký', 'Quản lý ký'),
+      const TicketSpace(2),
+    ]);
+  }
+
   /// Trang in thử khi cài máy in.
   static Ticket test(PrinterConfig printer, {Map<int, String> categoryNames = const {}}) {
     final cats = printer.categoryIds.map((id) => categoryNames[id] ?? '#$id').toList()..sort();

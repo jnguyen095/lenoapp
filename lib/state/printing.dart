@@ -117,6 +117,20 @@ class PrintActions {
     return report;
   }
 
+  /// Báo cáo cuối ngày ra các máy "In hóa đơn".
+  Future<PrintReport> shiftReport(ShiftReport r) async {
+    final report = PrintReport();
+    final printers = (await _settings()).receiptPrinters.toList();
+    if (printers.isEmpty) {
+      report.notConfigured = true;
+      return report;
+    }
+    final ticket = Tickets.shiftReport(r, _ref.read(shopSettingsProvider)?.receipt ?? const ReceiptInfo(),
+        printedAt: DateTime.now());
+    await Future.wait([for (final p in printers) _run(report, p, ticket)]);
+    return report;
+  }
+
   Future<PrintReport> test(PrinterConfig printer) async {
     final report = PrintReport();
     Map<int, String> names = const {};

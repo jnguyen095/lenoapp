@@ -68,6 +68,22 @@ class PosRepository {
   Future<OrderDetail> removeDiscount(int orderId) async =>
       OrderDetail.fromJson(await api.patch('orders/$orderId', {'discount_id': null}));
 
+  /// Áp lại bảng giá / khuyến mãi đang chọn ở Sơ đồ bàn cho đơn đã bỏ ([id] phải đúng lựa chọn ở Sơ đồ bàn).
+  Future<OrderDetail> reapplyPriceBook(int orderId, int priceBookId) async =>
+      OrderDetail.fromJson(await api.patch('orders/$orderId', {'price_book_id': priceBookId}));
+
+  Future<OrderDetail> reapplyDiscount(int orderId, int discountId) async =>
+      OrderDetail.fromJson(await api.patch('orders/$orderId', {'discount_id': discountId}));
+
+  /// Báo cáo cuối ngày của người đang đăng nhập (từ lúc đăng nhập trên máy này tới bây giờ).
+  Future<ShiftReport> shiftReport() async => ShiftReport.fromJson(await api.get('reports/shift'));
+
+  /// Đổi mật khẩu — các thiết bị khác phải đăng nhập lại, máy này vẫn giữ phiên.
+  Future<String> changePassword(String current, String next) async {
+    final res = await api.post('auth/password', {'current_password': current, 'new_password': next});
+    return (res['message'] as String?) ?? 'Đã đổi mật khẩu.';
+  }
+
   Future<OrderDetail> addItem(int orderId, int productId, {int qty = 1, String? note}) async =>
       OrderDetail.fromJson(await api.post('orders/$orderId/items', {
         'items': [
