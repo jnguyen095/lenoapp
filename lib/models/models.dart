@@ -796,12 +796,16 @@ class ShiftReport {
     this.paymentCount = 0,
     this.paymentTotal = 0,
     this.byMethod = const [],
+    this.receiptCount = 0,
+    this.receiptTotal = 0,
+    this.receiptsByMethod = const [],
   });
 
   factory ShiftReport.fromJson(Map<String, dynamic> j) {
     final user = j['user'] as Map<String, dynamic>;
     final orders = (j['orders'] as Map<String, dynamic>?) ?? const {};
     final payments = (j['payments'] as Map<String, dynamic>?) ?? const {};
+    final receipts = (j['receipts'] as Map<String, dynamic>?) ?? const {};
     return ShiftReport(
       fullname: (user['fullname'] as String?) ?? '',
       username: (user['username'] as String?) ?? '',
@@ -818,6 +822,11 @@ class ShiftReport {
       paymentTotal: _money(payments['total']),
       byMethod: [
         for (final m in (payments['by_method'] as List?) ?? const []) MethodTotal.fromJson(m as Map<String, dynamic>),
+      ],
+      receiptCount: _intOrNull(receipts['count']) ?? 0,
+      receiptTotal: _money(receipts['total']),
+      receiptsByMethod: [
+        for (final m in (receipts['by_method'] as List?) ?? const []) MethodTotal.fromJson(m as Map<String, dynamic>),
       ],
     );
   }
@@ -843,8 +852,24 @@ class ShiftReport {
   final double paymentTotal;
   final List<MethodTotal> byMethod;
 
+  /// Phiếu thu (sổ quỹ) người này thu trong khoảng — máy chủ cũ không gửi thì 0.
+  final int receiptCount;
+  final double receiptTotal;
+  final List<MethodTotal> receiptsByMethod;
+
+  /// Tiền bán hàng theo hình thức.
   double totalOf(String method) => byMethod.where((m) => m.method == method).firstOrNull?.total ?? 0;
   int countOf(String method) => byMethod.where((m) => m.method == method).firstOrNull?.count ?? 0;
+
+  /// Phiếu thu theo hình thức.
+  double receiptTotalOf(String method) => receiptsByMethod.where((m) => m.method == method).firstOrNull?.total ?? 0;
+  int receiptCountOf(String method) => receiptsByMethod.where((m) => m.method == method).firstOrNull?.count ?? 0;
+
+  /// Cả bán hàng + phiếu thu theo hình thức (vd tiền mặt phải có trong két).
+  double allOf(String method) => totalOf(method) + receiptTotalOf(method);
+
+  /// Tổng thu = bán hàng + phiếu thu.
+  double get grandTotal => paymentTotal + receiptTotal;
 }
 
 /// Đơn do người đang đăng nhập tạo trong một ngày + tổng kết.

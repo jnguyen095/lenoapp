@@ -168,8 +168,7 @@ class Tickets {
   /// Báo cáo cuối ngày của nhân viên: từ lúc đăng nhập tới lúc in — số đơn, tiền mặt, chuyển khoản, đơn huỷ.
   static Ticket shiftReport(ShiftReport r, ReceiptInfo receipt, {DateTime? printedAt}) {
     String money(double v) => formatMoney(v, withUnit: false);
-    final cash = r.totalOf(PaymentMethod.cash.code);
-    final transfer = r.totalOf(PaymentMethod.transfer.code);
+    const cash = 'CASH', transfer = 'TRANSFER';
     return Ticket([
       if (receipt.shopName.isNotEmpty) TicketText(receipt.shopName, align: TextAlign.center, scale: 1.3, bold: true),
       const TicketText('BÁO CÁO CUỐI NGÀY', align: TextAlign.center, scale: 1.2, bold: true),
@@ -183,9 +182,19 @@ class Tickets {
       if (r.openCount > 0) TicketRow('  Đang phục vụ', '${r.openCount} · ${money(r.openTotal)}'),
       TicketRow('  Đã huỷ', '${r.cancelledCount}'),
       const TicketDivider(),
-      TicketRow('Tiền mặt (${r.countOf(PaymentMethod.cash.code)})', money(cash)),
-      TicketRow('Chuyển khoản (${r.countOf(PaymentMethod.transfer.code)})', money(transfer)),
-      TicketRow('TỔNG THU', money(r.paymentTotal), bold: true),
+      // Tiền bán hàng (thanh toán đơn).
+      const TicketText('BÁN HÀNG', bold: true),
+      TicketRow('  Tiền mặt (${r.countOf(cash)})', money(r.totalOf(cash))),
+      TicketRow('  Chuyển khoản (${r.countOf(transfer)})', money(r.totalOf(transfer))),
+      // Phiếu thu sổ quỹ người này thu.
+      TicketText('PHIẾU THU (${r.receiptCount})', bold: true),
+      TicketRow('  Tiền mặt (${r.receiptCountOf(cash)})', money(r.receiptTotalOf(cash))),
+      TicketRow('  Chuyển khoản (${r.receiptCountOf(transfer)})', money(r.receiptTotalOf(transfer))),
+      const TicketDivider(),
+      // Tổng theo hình thức: tiền mặt = số phải có trong két.
+      TicketRow('Tổng tiền mặt', money(r.allOf(cash)), bold: true),
+      TicketRow('Tổng chuyển khoản', money(r.allOf(transfer)), bold: true),
+      TicketRow('TỔNG THU', money(r.grandTotal), bold: true, scale: 1.15),
       const TicketDivider(),
       TicketText('In lúc ${formatDateTime(printedAt?.toIso8601String())}', align: TextAlign.center),
       const TicketSpace(1.5),

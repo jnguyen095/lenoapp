@@ -118,7 +118,7 @@ class _ShiftReportScreenState extends ConsumerState<ShiftReportScreen> {
                       ),
                       const SizedBox(height: 12),
                       _Section(
-                        title: 'Tiền đã thu',
+                        title: 'Bán hàng',
                         children: [
                           _Line(
                             icon: Icons.payments_outlined,
@@ -130,11 +130,48 @@ class _ShiftReportScreenState extends ConsumerState<ShiftReportScreen> {
                             label: 'Chuyển khoản (${r.countOf(PaymentMethod.transfer.code)})',
                             value: formatMoney(r.totalOf(PaymentMethod.transfer.code)),
                           ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      // Phiếu thu sổ quỹ bạn thu (Lập phiếu thu).
+                      _Section(
+                        title: 'Phiếu thu (${r.receiptCount})',
+                        children: [
+                          _Line(
+                            icon: Icons.payments_outlined,
+                            label: 'Tiền mặt (${r.receiptCountOf(PaymentMethod.cash.code)})',
+                            value: formatMoney(r.receiptTotalOf(PaymentMethod.cash.code)),
+                          ),
+                          _Line(
+                            icon: Icons.account_balance_outlined,
+                            label: 'Chuyển khoản (${r.receiptCountOf(PaymentMethod.transfer.code)})',
+                            value: formatMoney(r.receiptTotalOf(PaymentMethod.transfer.code)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      // Tổng theo hình thức: tổng tiền mặt = số phải có trong két.
+                      _Section(
+                        title: 'Tổng cộng',
+                        children: [
+                          _Line(
+                            icon: Icons.point_of_sale_outlined,
+                            label: 'Tổng tiền mặt',
+                            note: 'bán hàng + phiếu thu',
+                            value: formatMoney(r.allOf(PaymentMethod.cash.code)),
+                            bold: true,
+                          ),
+                          _Line(
+                            icon: Icons.account_balance_outlined,
+                            label: 'Tổng chuyển khoản',
+                            value: formatMoney(r.allOf(PaymentMethod.transfer.code)),
+                            bold: true,
+                          ),
                           const Divider(height: 16),
                           _Line(
                             icon: Icons.summarize_outlined,
                             label: 'Tổng thu',
-                            value: formatMoney(r.paymentTotal),
+                            value: formatMoney(r.grandTotal),
                             bold: true,
                             color: theme.colorScheme.primary,
                           ),
@@ -151,7 +188,7 @@ class _ShiftReportScreenState extends ConsumerState<ShiftReportScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Tiền đã thu = các lần thanh toán bạn xác nhận. Số đơn = đơn bạn tạo (không tính đơn chưa có món).',
+                        'Bán hàng = các lần thanh toán bạn xác nhận. Phiếu thu = phiếu bạn thu (Lập phiếu thu). Số đơn = đơn bạn tạo (không tính đơn chưa có món).',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
                       ),

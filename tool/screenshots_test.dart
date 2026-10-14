@@ -205,6 +205,11 @@ class FakeRepo extends PosRepository {
         byMethod: [
           MethodTotal(method: 'CASH', label: 'Tiền mặt', count: 7, total: 850000),
           MethodTotal(method: 'TRANSFER', label: 'Chuyển khoản', count: 3, total: 400000),
+        ],
+        receiptCount: 2, receiptTotal: 300000,
+        receiptsByMethod: [
+          MethodTotal(method: 'CASH', label: 'Tiền mặt', count: 1, total: 100000),
+          MethodTotal(method: 'TRANSFER', label: 'Chuyển khoản', count: 1, total: 200000),
         ]);
   @override
   Future<OrderHistory> orderHistory({String? date}) async => OrderHistory(
@@ -518,6 +523,11 @@ void main() {
           byMethod: [
             MethodTotal(method: 'CASH', label: 'Tiền mặt', count: 7, total: 850000),
             MethodTotal(method: 'TRANSFER', label: 'Chuyển khoản', count: 3, total: 400000),
+          ],
+          receiptCount: 2, receiptTotal: 300000,
+          receiptsByMethod: [
+            MethodTotal(method: 'CASH', label: 'Tiền mặt', count: 1, total: 100000),
+            MethodTotal(method: 'TRANSFER', label: 'Chuyển khoản', count: 1, total: 200000),
           ]), receipt, printedAt: DateTime(2026, 10, 13, 17, 31)), 576),
       'ticket_provisional_58mm': (Tickets.bill(order(), receipt, bankQr: bankQr), 384),
       'ticket_receipt_80mm': (Tickets.bill(order(paid: true), receipt), 576),
