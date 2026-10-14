@@ -37,6 +37,7 @@ import 'package:leno_pos/ui/screens/printer_settings_screen.dart';
 import 'package:leno_pos/ui/screens/shift_report_screen.dart';
 import 'package:leno_pos/ui/widgets/change_password_dialog.dart';
 import 'package:leno_pos/ui/screens/store_settings_screen.dart';
+import 'package:leno_pos/ui/screens/support_screen.dart';
 import 'package:leno_pos/ui/widgets/payment_sheet.dart';
 import 'package:leno_pos/ui/widgets/top_toast.dart';
 
@@ -362,6 +363,7 @@ void main() {
 
   testWidgets('new screens', (tester) async {
     await shoot(tester, 'shift_report_phone', sizes['phone']!, const ShiftReportScreen());
+    await shoot(tester, 'support_phone', sizes['phone']!, const SupportScreen());
     await shoot(tester, 'order_phone_search', sizes['phone']!, const OrderScreen(orderId: 83));
     await shoot(tester, 'history_search_phone', sizes['phone']!, const OrderHistoryScreen(),
         interact: () => tester.enterText(find.byType(TextField), '019'));

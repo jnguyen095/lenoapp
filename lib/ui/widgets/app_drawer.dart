@@ -6,11 +6,12 @@ import '../screens/order_history_screen.dart';
 import '../screens/printer_settings_screen.dart';
 import '../screens/shift_report_screen.dart';
 import '../screens/store_settings_screen.dart';
+import '../screens/support_screen.dart';
 import 'change_password_dialog.dart';
 import 'dialogs.dart';
 
 /// Trang đang mở — để mục tương ứng trong menu được tô đậm và không mở chồng thêm lần nữa.
-enum AppPage { home, order, history, report, printers, store }
+enum AppPage { home, order, history, report, printers, store, support }
 
 /// Nút ☰ đặt cuối thanh tiêu đề ở các trang con (đầu trang đã có nút quay lại).
 class AppMenuButton extends StatelessWidget {
@@ -142,6 +143,13 @@ class AppDrawer extends ConsumerWidget {
                     subtitle: const Text('Tên quán, địa chỉ, lời cảm ơn…'),
                     selected: current == AppPage.store,
                     onTap: () => _open(context, AppPage.store, const StoreSettingsScreen()),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.support_agent),
+                    title: const Text('Hỗ trợ'),
+                    subtitle: const Text('K-Soft · 0367139698'),
+                    selected: current == AppPage.support,
+                    onTap: () => _open(context, AppPage.support, const SupportScreen()),
                   ),
                 ],
               ),
