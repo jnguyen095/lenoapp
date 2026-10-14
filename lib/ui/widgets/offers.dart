@@ -259,8 +259,10 @@ class OrderOfferChips extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final shortOf = order.discountShortOf;
 
+    // Hàng hẹp (điện thoại): mỗi ô chưa tới ~200px -> ghi chú xuống dòng riêng.
+    final stacked = MediaQuery.sizeOf(context).width < 600;
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
       decoration: BoxDecoration(border: Border(bottom: BorderSide(color: scheme.outlineVariant))),
       child: IntrinsicHeight(
         child: Row(
@@ -269,10 +271,11 @@ class OrderOfferChips extends ConsumerWidget {
             Expanded(
               child: _OfferChip(
                 icon: Icons.sell_outlined,
+                stacked: stacked,
                 label: 'Bảng giá',
                 value: hasBook ? (order.priceBookName ?? 'Bảng giá') : 'Giá gốc',
                 tone: hasBook ? _ChipTone.on : _ChipTone.none,
-                note: !hasBook && reBookId != null ? 'Đã bỏ · Sơ đồ bàn: ${shop!.priceBookName ?? ''}' : null,
+                note: !hasBook && reBookId != null ? 'Đã bỏ: ${shop!.priceBookName ?? ''}' : null,
                 onReapply: !hasBook && reBookId != null && editable ? () => onReapplyPriceBook(reBookId) : null,
                 onRemove: hasBook && editable
                     ? () async {
@@ -289,10 +292,11 @@ class OrderOfferChips extends ConsumerWidget {
               child: _OfferChip(
                 icon: Icons.percent,
                 label: 'Khuyến mãi',
+                stacked: stacked,
                 value: hasDisc ? (order.discountName ?? 'Khuyến mãi') : 'Không áp dụng',
                 // Chưa đủ đơn tối thiểu: còn thiếu bao nhiêu; đủ rồi: đã giảm bao nhiêu.
                 note: !hasDisc
-                    ? (reDiscount != null ? 'Đã bỏ · Sơ đồ bàn: ${reDiscount.name}' : null)
+                    ? (reDiscount != null ? 'Đã bỏ: ${reDiscount.name}' : null)
                     : shortOf > 0
                         ? 'Mua thêm ${formatMoney(shortOf)} để được giảm'
                         : 'Đã giảm ${formatMoney(order.discountAmount)}',
@@ -326,7 +330,11 @@ class _OfferChip extends StatelessWidget {
     this.note,
     this.onRemove,
     this.onReapply,
+    this.stacked = false,
   });
+
+  /// Ô hẹp (điện thoại): ghi chú xuống dòng riêng dưới tên.
+  final bool stacked;
 
   final IconData icon;
   final String label;
@@ -349,61 +357,73 @@ class _OfferChip extends StatelessWidget {
       _ChipTone.wait => (Colors.orange.shade800, Colors.orange.shade300, Colors.orange.shade50),
     };
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(10, 6, 4, 6),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: border),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: tone == _ChipTone.none ? scheme.outlineVariant : accent),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(label.toUpperCase(),
-                    style: theme.textTheme.labelSmall
-                        ?.copyWith(color: scheme.outline, fontWeight: FontWeight.w600, letterSpacing: 0.3)),
-                Text(
-                  value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: tone == _ChipTone.none ? scheme.outline : accent,
-                    fontWeight: tone == _ChipTone.none ? FontWeight.w500 : FontWeight.w600,
-                  ),
-                ),
-                if (note != null)
-                  Text(note!, style: theme.textTheme.labelSmall?.copyWith(color: accent)),
-              ],
-            ),
-          ),
-          if (onRemove != null)
-            IconButton(
-              onPressed: onRemove,
-              tooltip: 'Bỏ cho đơn này',
-              visualDensity: VisualDensity.compact,
-              style: IconButton.styleFrom(backgroundColor: Colors.black.withValues(alpha: 0.05)),
-              iconSize: 16,
-              icon: const Icon(Icons.close),
-            )
-          else if (onReapply != null)
-            IconButton.filledTonal(
-              onPressed: onReapply,
-              tooltip: 'Áp dụng lại cho đơn này',
-              visualDensity: VisualDensity.compact,
-              iconSize: 18,
-              icon: const Icon(Icons.replay),
-            )
-          else
+    // Gọn một hàng: biểu tượng · tên (đậm) + ghi chú nhỏ ngay sau, nút ✕ / ↻ nhỏ ở cuối. Tên mục (Bảng giá /
+    // Khuyến mãi) nằm trong gợi ý khi nhấn giữ.
+    final valueColor = tone == _ChipTone.none ? scheme.outline : accent;
+    return Tooltip(
+      message: note == null ? '$label: $value' : '$label: $value · $note',
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 38),
+        padding: const EdgeInsets.fromLTRB(10, 4, 4, 4),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: border),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 16, color: tone == _ChipTone.none ? scheme.outlineVariant : accent),
             const SizedBox(width: 6),
-        ],
+            Expanded(
+              child: Builder(builder: (context) {
+                final valueStyle = theme.textTheme.bodyMedium?.copyWith(
+                  color: valueColor,
+                  fontWeight: tone == _ChipTone.none ? FontWeight.w500 : FontWeight.w600,
+                );
+                final noteStyle = theme.textTheme.labelSmall?.copyWith(color: accent);
+                // Ô hẹp (điện thoại): tên một dòng, ghi chú xuống dòng riêng để không bị cắt mất số tiền.
+                if (note != null && stacked) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: valueStyle),
+                      Text(note!, maxLines: 2, overflow: TextOverflow.ellipsis, style: noteStyle),
+                    ],
+                  );
+                }
+                // Ô rộng: tên + ghi chú nhỏ ngay sau trên cùng một dòng.
+                return Text.rich(
+                  TextSpan(children: [
+                    TextSpan(text: value, style: valueStyle),
+                    if (note != null) TextSpan(text: '  $note', style: noteStyle),
+                  ]),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                );
+              }),
+            ),
+            if (onRemove != null || onReapply != null)
+              SizedBox.square(
+                dimension: 28,
+                child: IconButton(
+                  onPressed: onRemove ?? onReapply,
+                  tooltip: onRemove != null ? 'Bỏ cho đơn này' : 'Áp dụng lại cho đơn này',
+                  padding: EdgeInsets.zero,
+                  style: IconButton.styleFrom(
+                    backgroundColor:
+                        onRemove != null ? Colors.black.withValues(alpha: 0.05) : scheme.primaryContainer,
+                    foregroundColor: onRemove != null ? null : scheme.primary,
+                  ),
+                  iconSize: 16,
+                  icon: Icon(onRemove != null ? Icons.close : Icons.replay),
+                ),
+              )
+            else
+              const SizedBox(width: 6),
+          ],
+        ),
       ),
     );
   }
 }
-
