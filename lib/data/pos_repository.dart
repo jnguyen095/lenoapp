@@ -96,8 +96,13 @@ class PosRepository {
     return CashReceipt.fromJson(res['receipt'] as Map<String, dynamic>);
   }
 
-  /// Báo cáo cuối ngày của người đang đăng nhập (từ lúc đăng nhập trên máy này tới bây giờ).
-  Future<ShiftReport> shiftReport() async => ShiftReport.fromJson(await api.get('reports/shift'));
+  /// Báo cáo cuối ngày của người đang đăng nhập: từ 00:00 hôm nay tới bây giờ.
+  Future<ShiftReport> shiftReport() async {
+    final now = DateTime.now();
+    String two(int n) => n.toString().padLeft(2, '0');
+    final from = '${now.year}-${two(now.month)}-${two(now.day)} 00:00';
+    return ShiftReport.fromJson(await api.get('reports/shift?from=${Uri.encodeQueryComponent(from)}'));
+  }
 
   /// Đổi mật khẩu — các thiết bị khác phải đăng nhập lại, máy này vẫn giữ phiên.
   Future<String> changePassword(String current, String next) async {

@@ -12,7 +12,7 @@ import '../widgets/print_feedback.dart';
 final shiftReportProvider =
     FutureProvider.autoDispose<ShiftReport>((ref) => ref.watch(posRepositoryProvider).shiftReport());
 
-/// Báo cáo cuối ngày: nhân viên, từ lúc đăng nhập tới bây giờ, số đơn (đã thanh toán / đang phục vụ / đã huỷ),
+/// Báo cáo cuối ngày: nhân viên, từ đầu ngày (00:00) tới bây giờ, số đơn (đã thanh toán / đang phục vụ / đã huỷ),
 /// tiền mặt, chuyển khoản, tổng thu — in ra máy in hóa đơn để bàn giao ca.
 class ShiftReportScreen extends ConsumerStatefulWidget {
   const ShiftReportScreen({super.key});
@@ -90,7 +90,7 @@ class _ShiftReportScreenState extends ConsumerState<ShiftReportScreen> {
                             icon: Icons.login,
                             label: 'Từ',
                             value: formatDateTime(r.from),
-                            note: r.loginAt != null && r.loginAt == r.from ? 'lúc đăng nhập trên máy này' : 'đầu ngày',
+                            note: 'đầu ngày',
                           ),
                           _Line(icon: Icons.schedule, label: 'Đến', value: formatDateTime(r.to), note: 'bây giờ'),
                         ],
