@@ -187,12 +187,12 @@ void main() {
     const content = DisplayContent(
       shopName: 'Leno',
       config: DisplayConfig(slideSeconds: 12, textScale: 1.2),
-      slides: [DisplaySlide(id: 1, url: 'assets/uploads/display/a.jpg', file: '/x/a.jpg', durationSeconds: 5)],
+      slides: [DisplaySlide(id: 1, url: 'assets/uploads/display/a.jpg', file: '/x/a.jpg', title: 'KM')],
       version: 'v1',
     );
     final c2 = DisplayContent.fromJson(content.toJson());
     expect(c2.config.slideSeconds, 12);
-    expect(c2.readySlides.single.durationSeconds, 5);
+    expect(c2.readySlides.single.title, 'KM');
   });
 
   test('SlideCache downloads new images, keeps cached ones, skips failures, cleans old files', () async {

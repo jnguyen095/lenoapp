@@ -47,15 +47,16 @@ class DisplayConfig {
 }
 
 /// Ảnh trình chiếu. [url] = đường dẫn trên máy chủ (assets/...), [file] = bản đã tải về máy.
+/// Mọi ảnh hiện cùng một thời gian (config.slideSeconds — "Thời gian mỗi ảnh" trên web); máy chủ không còn đặt
+/// thời gian riêng từng ảnh (khoá duration_seconds luôn null, bỏ qua).
 class DisplaySlide {
-  const DisplaySlide({required this.id, required this.url, this.file, this.title, this.durationSeconds, this.updatedAt});
+  const DisplaySlide({required this.id, required this.url, this.file, this.title, this.updatedAt});
 
   factory DisplaySlide.fromJson(Map<String, dynamic> j) => DisplaySlide(
         id: (j['id'] as num).toInt(),
         url: (j['image'] as String?) ?? '',
         file: j['file'] as String?,
         title: j['title'] as String?,
-        durationSeconds: (j['duration_seconds'] as num?)?.toInt(),
         updatedAt: j['updated_at'] as String?,
       );
 
@@ -63,18 +64,16 @@ class DisplaySlide {
   final String url;
   final String? file;
   final String? title;
-  final int? durationSeconds;
   final String? updatedAt;
 
   DisplaySlide withFile(String? path) =>
-      DisplaySlide(id: id, url: url, file: path, title: title, durationSeconds: durationSeconds, updatedAt: updatedAt);
+      DisplaySlide(id: id, url: url, file: path, title: title, updatedAt: updatedAt);
 
   Map<String, dynamic> toJson() => {
         'id': id,
         'image': url,
         'file': file,
         'title': title,
-        'duration_seconds': durationSeconds,
         'updated_at': updatedAt,
       };
 }

@@ -83,7 +83,7 @@ class _IdleViewState extends State<_IdleView> {
   void _schedule() {
     _timer?.cancel();
     if (_slides.length < 2) return;
-    final seconds = _slides[_index].durationSeconds ?? widget.content.config.slideSeconds;
+    final seconds = widget.content.config.slideSeconds; // "Thời gian mỗi ảnh" dùng chung (web)
     _timer = Timer(Duration(seconds: seconds), () {
       if (!mounted) return;
       setState(() => _index = (_index + 1) % _slides.length);

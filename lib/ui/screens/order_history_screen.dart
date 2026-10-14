@@ -9,7 +9,8 @@ import 'order_screen.dart';
 
 enum _Filter { all, open, paid }
 
-/// Lịch sử đơn hàng: các đơn do người đang đăng nhập tạo hôm nay, mới nhất trước.
+/// Lịch sử đơn hàng: đơn người đang đăng nhập tạo — đã thanh toán hôm nay (theo giờ thanh toán, khớp Sổ quỹ) và
+/// đang mở / đã huỷ mở hôm nay; mới đóng / mới mở trước.
 /// Bấm một đơn để xem lại (đơn đang phục vụ thì gọi món tiếp được).
 class OrderHistoryScreen extends ConsumerStatefulWidget {
   const OrderHistoryScreen({super.key});
@@ -224,10 +225,16 @@ class _OrderTile extends StatelessWidget {
       _ => (Icons.room_service, const Color(0xFFEF6C00)),
     };
     String hhmm(String? t) => formatTime(t).split(' ').first;
-    // Luôn hiện giờ mở đơn (danh sách sắp theo giờ này); đơn đã trả thêm giờ thanh toán.
+    // Đơn đã thanh toán: giờ đóng đơn trước (danh sách và doanh thu tính theo giờ này, khớp Sổ quỹ), kèm giờ mở —
+    // mở từ hôm khác thì ghi cả ngày. Đơn đang mở / đã huỷ: giờ mở.
+    final paid = order.isPaid && order.paidAt != null;
+    final openedOtherDay = paid && (order.createdAt ?? '').split(' ').first != order.paidAt!.split(' ').first;
     final details = [
-      'Mở lúc ${hhmm(order.createdAt)}',
-      if (order.isPaid && order.paidAt != null) 'trả ${hhmm(order.paidAt)}',
+      if (paid) ...[
+        'Đóng lúc ${hhmm(order.paidAt)}',
+        openedOtherDay ? 'mở ${formatTime(order.createdAt)}' : 'mở ${hhmm(order.createdAt)}',
+      ] else
+        'Mở lúc ${hhmm(order.createdAt)}',
       '${order.itemCount} món',
       ?order.methodLabel,
     ].join(' · ');
