@@ -141,6 +141,30 @@ class Tickets {
     ]);
   }
 
+  /// Phiếu thu (sổ quỹ): số phiếu, thời gian, loại thu, người nộp, hình thức, số tiền, ghi chú, chữ ký.
+  static Ticket cashReceipt(CashReceipt r, ReceiptInfo receipt) {
+    return Ticket([
+      if (receipt.shopName.isNotEmpty) TicketText(receipt.shopName, align: TextAlign.center, scale: 1.3, bold: true),
+      if (receipt.address.isNotEmpty || receipt.phone.isNotEmpty)
+        TicketText([receipt.address, receipt.phone].where((s) => s.isNotEmpty).join(' - '), align: TextAlign.center),
+      const TicketText('PHIẾU THU', align: TextAlign.center, scale: 1.2, bold: true),
+      TicketText('Số: ${r.entryNo}', align: TextAlign.center),
+      const TicketDivider(),
+      TicketRow('Thời gian', formatDateTime(r.entryDate)),
+      if ((r.categoryName ?? '').isNotEmpty) TicketRow('Loại thu', r.categoryName!),
+      if ((r.counterparty ?? '').isNotEmpty) TicketRow('Người nộp', r.counterparty!),
+      TicketRow('Hình thức', r.methodLabel),
+      if ((r.handledName ?? '').isNotEmpty) TicketRow('Người thu', r.handledName!),
+      if ((r.note ?? '').isNotEmpty) TicketText('Ghi chú: ${r.note}', italic: true),
+      const TicketDivider(),
+      TicketRow('SỐ TIỀN', formatMoney(r.amount), bold: true, scale: 1.2),
+      const TicketDivider(),
+      const TicketSpace(1.2),
+      const TicketRow('Người nộp', 'Người thu'),
+      const TicketSpace(2),
+    ]);
+  }
+
   /// Báo cáo cuối ngày của nhân viên: từ lúc đăng nhập tới lúc in — số đơn, tiền mặt, chuyển khoản, đơn huỷ.
   static Ticket shiftReport(ShiftReport r, ReceiptInfo receipt, {DateTime? printedAt}) {
     String money(double v) => formatMoney(v, withUnit: false);

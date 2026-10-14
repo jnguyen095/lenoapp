@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/auth.dart';
+import '../screens/cash_receipt_screen.dart';
 import '../screens/order_history_screen.dart';
 import '../screens/printer_settings_screen.dart';
 import '../screens/shift_report_screen.dart';
@@ -11,7 +12,7 @@ import 'change_password_dialog.dart';
 import 'dialogs.dart';
 
 /// Trang đang mở — để mục tương ứng trong menu được tô đậm và không mở chồng thêm lần nữa.
-enum AppPage { home, order, history, report, printers, store, support }
+enum AppPage { home, order, history, report, cashbook, printers, store, support }
 
 /// Nút ☰ đặt cuối thanh tiêu đề ở các trang con (đầu trang đã có nút quay lại).
 class AppMenuButton extends StatelessWidget {
@@ -130,6 +131,13 @@ class AppDrawer extends ConsumerWidget {
                     subtitle: const Text('Số đơn, tiền mặt, chuyển khoản — in bàn giao ca'),
                     selected: current == AppPage.report,
                     onTap: () => _open(context, AppPage.report, const ShiftReportScreen()),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.request_quote_outlined),
+                    title: const Text('Lập phiếu thu'),
+                    subtitle: const Text('Sổ quỹ — tiền nhận ngoài bán hàng'),
+                    selected: current == AppPage.cashbook,
+                    onTap: () => _open(context, AppPage.cashbook, const CashReceiptScreen()),
                   ),
                   ListTile(
                     leading: const Icon(Icons.print_outlined),

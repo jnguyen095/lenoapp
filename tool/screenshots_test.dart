@@ -38,6 +38,7 @@ import 'package:leno_pos/ui/screens/shift_report_screen.dart';
 import 'package:leno_pos/ui/widgets/change_password_dialog.dart';
 import 'package:leno_pos/ui/screens/store_settings_screen.dart';
 import 'package:leno_pos/ui/screens/support_screen.dart';
+import 'package:leno_pos/ui/screens/cash_receipt_screen.dart';
 import 'package:leno_pos/ui/widgets/payment_sheet.dart';
 import 'package:leno_pos/ui/widgets/top_toast.dart';
 
@@ -179,6 +180,23 @@ class FakeRepo extends PosRepository {
   Future<ShopOffers> offers() async => ShopOffers(
         priceBookId: priceBook.id, priceBookName: priceBook.name, discount: discounts_.first,
         priceBooks: const [priceBook], discounts: discounts_);
+  @override
+  Future<CashReceiptsData> cashReceipts() async => CashReceiptsData.fromJson({
+        'categories': [
+          {'id': 1, 'name': 'Thu khác'},
+          {'id': 2, 'name': 'Góp vốn'},
+          {'id': 3, 'name': 'Thu nợ'},
+          {'id': 4, 'name': 'Hoàn tiền nhà cung cấp'},
+        ],
+        'counterparties': ['Anh Nam', 'Chị Hoa'],
+        'receipts': [
+          {'id': 8, 'entry_no': 'PT000004', 'entry_date': '2026-10-14 09:10:00', 'payment_method': 'TRANSFER',
+            'method_label': 'Chuyển khoản', 'category_name': 'Thu khác', 'handled_name': 'Lan', 'amount': 20000},
+          {'id': 7, 'entry_no': 'PT000003', 'entry_date': '2026-10-14 08:52:07', 'payment_method': 'CASH',
+            'method_label': 'Tiền mặt', 'category_name': 'Thu nợ', 'counterparty': 'Anh Nam', 'handled_name': 'Lan',
+            'amount': 150000, 'note': 'Trả nợ tuần trước'},
+        ],
+      });
   @override
   Future<ShiftReport> shiftReport() async => const ShiftReport(
         fullname: 'Nguyễn Thị Lan', username: 'lan', from: '2026-10-13 07:02:11', to: '2026-10-13 17:30:00',
@@ -364,6 +382,9 @@ void main() {
   testWidgets('new screens', (tester) async {
     await shoot(tester, 'shift_report_phone', sizes['phone']!, const ShiftReportScreen());
     await shoot(tester, 'support_phone', sizes['phone']!, const SupportScreen());
+    await shoot(tester, 'cash_receipts_phone', sizes['phone']!, const CashReceiptScreen());
+    await shoot(tester, 'cash_receipt_form_phone', sizes['phone']!, const CashReceiptScreen(),
+        interact: () => tester.tap(find.byType(FloatingActionButton)));
     await shoot(tester, 'order_phone_search', sizes['phone']!, const OrderScreen(orderId: 83));
     await shoot(tester, 'history_search_phone', sizes['phone']!, const OrderHistoryScreen(),
         interact: () => tester.enterText(find.byType(TextField), '019'));

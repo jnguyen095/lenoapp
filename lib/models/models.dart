@@ -712,6 +712,72 @@ class MethodTotal {
   final double total;
 }
 
+/// Phiếu thu (sổ quỹ) do nhân viên lập trên ứng dụng — mã PT000001...
+class CashReceipt {
+  const CashReceipt({
+    required this.id,
+    required this.entryNo,
+    required this.entryDate,
+    required this.paymentMethod,
+    required this.methodLabel,
+    required this.amount,
+    this.categoryName,
+    this.counterparty,
+    this.handledName,
+    this.note,
+  });
+
+  factory CashReceipt.fromJson(Map<String, dynamic> j) => CashReceipt(
+        id: _int(j['id']),
+        entryNo: j['entry_no'] as String,
+        entryDate: j['entry_date'] as String,
+        paymentMethod: j['payment_method'] as String,
+        methodLabel: (j['method_label'] as String?) ?? '',
+        amount: _money(j['amount']),
+        categoryName: _str(j['category_name']),
+        counterparty: _str(j['counterparty']),
+        handledName: _str(j['handled_name']),
+        note: _str(j['note']),
+      );
+
+  final int id;
+  final String entryNo;
+
+  /// "Y-m-d H:i:s" theo giờ máy chủ.
+  final String entryDate;
+  final String paymentMethod;
+  final String methodLabel;
+  final double amount;
+  final String? categoryName;
+
+  /// Người nộp tiền.
+  final String? counterparty;
+
+  /// Nhân viên thu.
+  final String? handledName;
+  final String? note;
+}
+
+/// Dữ liệu màn hình "Lập phiếu thu" (GET /cashbook/receipts): loại thu, tên người nộp đã dùng, phiếu đã lập hôm nay.
+class CashReceiptsData {
+  const CashReceiptsData({this.categories = const [], this.counterparties = const [], this.receipts = const []});
+
+  factory CashReceiptsData.fromJson(Map<String, dynamic> j) => CashReceiptsData(
+        categories: [
+          for (final c in (j['categories'] as List?) ?? const [])
+            (id: _int((c as Map<String, dynamic>)['id']), name: c['name'] as String),
+        ],
+        counterparties: [for (final s in (j['counterparties'] as List?) ?? const []) s as String],
+        receipts: [for (final r in (j['receipts'] as List?) ?? const []) CashReceipt.fromJson(r as Map<String, dynamic>)],
+      );
+
+  final List<({int id, String name})> categories;
+  final List<String> counterparties;
+  final List<CashReceipt> receipts;
+
+  double get total => receipts.fold(0, (s, r) => s + r.amount);
+}
+
 /// Báo cáo cuối ngày (GET /reports/shift) của người đang đăng nhập: từ lúc đăng nhập trên máy này (hoặc 00:00 hôm nay)
 /// tới lúc xem — số đơn đã tạo theo trạng thái và tiền đã thu theo hình thức.
 class ShiftReport {

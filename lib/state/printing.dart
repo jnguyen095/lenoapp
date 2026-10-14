@@ -117,6 +117,19 @@ class PrintActions {
     return report;
   }
 
+  /// Phiếu thu (sổ quỹ) ra các máy "In hóa đơn".
+  Future<PrintReport> cashReceipt(CashReceipt r) async {
+    final report = PrintReport();
+    final printers = (await _settings()).receiptPrinters.toList();
+    if (printers.isEmpty) {
+      report.notConfigured = true;
+      return report;
+    }
+    final ticket = Tickets.cashReceipt(r, _ref.read(shopSettingsProvider)?.receipt ?? const ReceiptInfo());
+    await Future.wait([for (final p in printers) _run(report, p, ticket)]);
+    return report;
+  }
+
   /// Báo cáo cuối ngày ra các máy "In hóa đơn".
   Future<PrintReport> shiftReport(ShiftReport r) async {
     final report = PrintReport();

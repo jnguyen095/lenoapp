@@ -75,6 +75,27 @@ class PosRepository {
   Future<OrderDetail> reapplyDiscount(int orderId, int discountId) async =>
       OrderDetail.fromJson(await api.patch('orders/$orderId', {'discount_id': discountId}));
 
+  /// Sổ quỹ: loại thu, gợi ý người nộp, phiếu thu người này đã lập hôm nay.
+  Future<CashReceiptsData> cashReceipts() async => CashReceiptsData.fromJson(await api.get('cashbook/receipts'));
+
+  /// Lập phiếu thu ngay bây giờ (nhân viên thu = người đang đăng nhập).
+  Future<CashReceipt> createCashReceipt({
+    required int categoryId,
+    required PaymentMethod method,
+    required double amount,
+    String? counterparty,
+    String? note,
+  }) async {
+    final res = await api.post('cashbook/receipts', {
+      'category_id': categoryId,
+      'payment_method': method.code,
+      'amount': amount,
+      'counterparty': counterparty,
+      'note': note,
+    });
+    return CashReceipt.fromJson(res['receipt'] as Map<String, dynamic>);
+  }
+
   /// Báo cáo cuối ngày của người đang đăng nhập (từ lúc đăng nhập trên máy này tới bây giờ).
   Future<ShiftReport> shiftReport() async => ShiftReport.fromJson(await api.get('reports/shift'));
 

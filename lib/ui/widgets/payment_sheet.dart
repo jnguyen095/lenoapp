@@ -142,7 +142,7 @@ class _PaymentSheetState extends State<_PaymentSheet> {
                     inputFormatters: [
                       FilteringTextInputFormatter.digitsOnly,
                       LengthLimitingTextInputFormatter(11),
-                      _ThousandsFormatter(),
+                      ThousandsInputFormatter(),
                     ],
                     style: theme.textTheme.headlineSmall,
                     decoration: const InputDecoration(labelText: 'Khách đưa', suffixText: 'đ'),
@@ -318,7 +318,7 @@ class _CashChip extends StatelessWidget {
 }
 
 /// 150000 -> 150.000 khi đang gõ.
-class _ThousandsFormatter extends TextInputFormatter {
+class ThousandsInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
     final digits = newValue.text.replaceAll('.', '');
