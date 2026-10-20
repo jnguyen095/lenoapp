@@ -4,7 +4,7 @@
     <uses-feature android:name="android.hardware.usb.host" android:required="false"/>
     <application
         android:usesCleartextTraffic="true"
-        android:label="Leno POS"
+        android:label="Nắng Nghiêng"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

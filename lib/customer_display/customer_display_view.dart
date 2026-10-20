@@ -279,7 +279,7 @@ class _OrderViewState extends State<_OrderView> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (widget.landscape) ...[
-            Center(child: _BrandMark(height: 10 * u, color: _onBrand)),
+            Center(child: _BrandMark(height: 14 * u, color: _onBrand)),
             SizedBox(height: 4 * u),
           ],
           _SumRow('Số món', '${s.itemCount}', u: u),

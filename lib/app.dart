@@ -33,7 +33,7 @@ class LenoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Leno POS',
+      title: 'Nắng Nghiêng',
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
       theme: buildTheme(Brightness.light),
