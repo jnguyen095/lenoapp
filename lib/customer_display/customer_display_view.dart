@@ -7,8 +7,12 @@ import 'package:qr/qr.dart';
 import '../core/format.dart';
 import 'display_models.dart';
 
-const _brand = Color(0xFF0190DB);
-const _brandDark = Color(0xFF016FA9);
+// Màu chủ đạo màn hình khách: vàng nắng #FFB300 (thương hiệu Nắng Nghiêng). Chữ trên nền vàng dùng nâu đậm
+// [_onBrand]; chữ màu vàng trên nền trắng dùng vàng đậm [_brandInk] cho dễ đọc.
+const _brand = Color(0xFFFFB300);
+const _brandDark = Color(0xFFFF8F00);
+const _brandInk = Color(0xFF9A6700);
+const _onBrand = Color(0xFF3A2600);
 const _ink = Color(0xFF1B1F24);
 const _muted = Color(0xFF6B7280);
 const _paper = Color(0xFFF6F8FB);
@@ -112,14 +116,10 @@ class _IdleViewState extends State<_IdleView> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _Logo(size: 30 * u),
-            SizedBox(height: 4 * u),
-            Text(widget.content.shopName,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white, fontSize: 8 * u, fontWeight: FontWeight.w600)),
+            _BrandMark(height: 22 * u, color: _onBrand),
             if (cfg.welcomeText.isNotEmpty) ...[
-              SizedBox(height: 2 * u),
-              Text(cfg.welcomeText, textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 4.2 * u)),
+              SizedBox(height: 4 * u),
+              Text(cfg.welcomeText, textAlign: TextAlign.center, style: TextStyle(color: _onBrand, fontSize: 4.6 * u)),
             ],
           ],
         ),
@@ -157,21 +157,17 @@ class _IdleViewState extends State<_IdleView> {
                 ),
               ),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  _Logo(size: 10 * u),
-                  SizedBox(width: 3 * u),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(widget.content.shopName,
-                            style: TextStyle(color: Colors.white, fontSize: 4.6 * u, fontWeight: FontWeight.w600)),
-                        if (cfg.welcomeText.isNotEmpty)
-                          Text(cfg.welcomeText, style: TextStyle(color: Colors.white70, fontSize: 3.2 * u)),
-                      ],
+                  _BrandMark(height: 9 * u, color: Colors.white),
+                  SizedBox(width: 4 * u),
+                  if (cfg.welcomeText.isNotEmpty)
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(bottom: 1 * u),
+                        child: Text(cfg.welcomeText, style: TextStyle(color: Colors.white70, fontSize: 3.4 * u)),
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -181,19 +177,21 @@ class _IdleViewState extends State<_IdleView> {
   }
 }
 
-class _Logo extends StatelessWidget {
-  const _Logo({required this.size});
+/// Chữ thương hiệu "Nắng Nghiêng" (ảnh trắng nền trong suốt, tô theo [color]: nâu trên nền vàng, trắng trên ảnh).
+class _BrandMark extends StatelessWidget {
+  const _BrandMark({required this.height, required this.color});
 
-  final double size;
+  final double height;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
-      padding: EdgeInsets.all(size * 0.03),
-      child: ClipOval(child: Image.asset('assets/images/leno-logo.jpg', fit: BoxFit.cover)),
+    return Image.asset(
+      'assets/images/nang-nghieng-brand-white.png',
+      height: height,
+      color: color,
+      colorBlendMode: BlendMode.srcIn,
+      filterQuality: FilterQuality.medium,
     );
   }
 }
@@ -253,7 +251,7 @@ class _OrderViewState extends State<_OrderView> {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 2.4 * u, vertical: 0.8 * u),
                 decoration: BoxDecoration(border: Border.all(color: _brand, width: 2), borderRadius: BorderRadius.circular(2 * u)),
-                child: Text(s.tableName, style: TextStyle(fontSize: 3.8 * u, color: _brand, fontWeight: FontWeight.w600)),
+                child: Text(s.tableName, style: TextStyle(fontSize: 3.8 * u, color: _brandInk, fontWeight: FontWeight.w600)),
               ),
             ],
           ),
@@ -281,22 +279,19 @@ class _OrderViewState extends State<_OrderView> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (widget.landscape) ...[
-            Center(child: _Logo(size: 14 * u)),
-            SizedBox(height: 1.5 * u),
-            Text(widget.shopName,
-                textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 4.2 * u, fontWeight: FontWeight.w600)),
+            Center(child: _BrandMark(height: 10 * u, color: _onBrand)),
             SizedBox(height: 4 * u),
           ],
           _SumRow('Số món', '${s.itemCount}', u: u),
           _SumRow('Tạm tính', formatMoney(s.subtotal), u: u),
           if (s.discount > 0) _SumRow('Chiết khấu', '-${formatMoney(s.discount)}', u: u),
-          Divider(color: Colors.white.withValues(alpha: 0.4), height: 3 * u),
-          Text('TỔNG CỘNG', style: TextStyle(color: Colors.white70, fontSize: 3.4 * u)),
+          Divider(color: _onBrand.withValues(alpha: 0.3), height: 3 * u),
+          Text('TỔNG CỘNG', style: TextStyle(color: _onBrand.withValues(alpha: 0.75), fontSize: 3.4 * u)),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: Text(formatMoney(s.total),
-                style: TextStyle(color: Colors.white, fontSize: 10 * u, fontWeight: FontWeight.w700, height: 1.1)),
+                style: TextStyle(color: _onBrand, fontSize: 10 * u, fontWeight: FontWeight.w700, height: 1.1)),
           ),
         ],
       ),
@@ -324,9 +319,9 @@ class _LineRow extends StatelessWidget {
           Container(
             constraints: BoxConstraints(minWidth: 7 * u),
             padding: EdgeInsets.symmetric(horizontal: 1.2 * u, vertical: 0.5 * u),
-            decoration: BoxDecoration(color: _brand.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(1.5 * u)),
+            decoration: BoxDecoration(color: _brand.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(1.5 * u)),
             child: Text('${line.qty}×',
-                textAlign: TextAlign.center, style: TextStyle(color: _brandDark, fontSize: 3.4 * u, fontWeight: FontWeight.w600)),
+                textAlign: TextAlign.center, style: TextStyle(color: _brandInk, fontSize: 3.4 * u, fontWeight: FontWeight.w600)),
           ),
           SizedBox(width: 2.5 * u),
           Expanded(
@@ -372,7 +367,7 @@ class _SumRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = TextStyle(color: Colors.white, fontSize: 3.4 * u);
+    final style = TextStyle(color: _onBrand, fontSize: 3.4 * u);
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 0.4 * u),
       child: Row(children: [Text(label, style: style), const Spacer(), Text(value, style: style)]),
@@ -415,7 +410,7 @@ class _PayingView extends StatelessWidget {
         Text('Số tiền', style: TextStyle(color: _muted, fontSize: 3.2 * u)),
         FittedBox(
           fit: BoxFit.scaleDown,
-          child: Text(formatMoney(s.total), style: TextStyle(color: _brand, fontSize: 11 * u, fontWeight: FontWeight.w700, height: 1.1)),
+          child: Text(formatMoney(s.total), style: TextStyle(color: _brandInk, fontSize: 11 * u, fontWeight: FontWeight.w700, height: 1.1)),
         ),
         SizedBox(height: 3 * u),
         if ((s.bankName ?? '').isNotEmpty || (s.accountNo ?? '').isNotEmpty)
@@ -514,7 +509,7 @@ class _ThanksView extends StatelessWidget {
               width: 22 * u,
               height: 22 * u,
               decoration: const BoxDecoration(color: _brand, shape: BoxShape.circle),
-              child: Icon(Icons.check_rounded, color: Colors.white, size: 16 * u),
+              child: Icon(Icons.check_rounded, color: _onBrand, size: 16 * u),
             ),
             SizedBox(height: 4 * u),
             Text(text.isEmpty ? 'Cảm ơn quý khách!' : text,
@@ -526,11 +521,11 @@ class _ThanksView extends StatelessWidget {
               SizedBox(height: 3 * u),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 5 * u, vertical: 2 * u),
-                decoration: BoxDecoration(color: _brand.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(3 * u)),
+                decoration: BoxDecoration(color: _brand.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(3 * u)),
                 child: Column(
                   children: [
                     Text('Tiền thối lại', style: TextStyle(color: _muted, fontSize: 3.2 * u)),
-                    Text(formatMoney(s.change!), style: TextStyle(color: _brandDark, fontSize: 9 * u, fontWeight: FontWeight.w700)),
+                    Text(formatMoney(s.change!), style: TextStyle(color: _brandInk, fontSize: 9 * u, fontWeight: FontWeight.w700)),
                   ],
                 ),
               ),

@@ -43,7 +43,7 @@ class _CustomerDisplayAppState extends State<CustomerDisplayApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(useMaterial3: true, colorSchemeSeed: const Color(0xFF0190DB)),
+      theme: ThemeData(useMaterial3: true, colorSchemeSeed: const Color(0xFFFFB300)),
       home: Scaffold(body: CustomerDisplayView(content: _content, snapshot: _snapshot)),
     );
   }

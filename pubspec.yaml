@@ -27,14 +27,14 @@ flutter:
   assets:
     - assets/images/
 
-# Biểu tượng ứng dụng trên màn hình chính (từ assets/images/leno-logo.jpg — xem tool/make_app_icon_test.dart).
+# Biểu tượng ứng dụng trên màn hình chính (từ assets/images/nang-nghieng-app-icon.png = favicon web — xem tool/make_app_icon_test.dart).
 # Sinh lại: flutter test tool/make_app_icon_test.dart && dart run flutter_launcher_icons
 flutter_launcher_icons:
   android: "ic_launcher"
   ios: true
   image_path: "assets/icon/app_icon.png"
-  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_background: "#0088FF"
   adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
   remove_alpha_ios: true
-  background_color_ios: "#FFFFFF"
+  background_color_ios: "#0088FF"
   min_sdk_android: 21

@@ -93,14 +93,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      // Biểu tượng ứng dụng + chữ thương hiệu "Nắng Nghiêng".
                       Center(
-                        // Logo tròn trên nền trắng -> cắt tròn để không lộ góc trắng.
-                        child: ClipOval(
-                          child: Image.asset('assets/images/leno-logo.jpg', width: 128, height: 128, fit: BoxFit.cover),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(22),
+                          child: Image.asset('assets/images/nang-nghieng-app-icon.png', width: 96, height: 96),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      Text('Leno POS', textAlign: TextAlign.center, style: theme.textTheme.headlineMedium),
+                      const SizedBox(height: 12),
+                      Center(child: Image.asset('assets/images/nang-nghieng-brand.png', height: 64)),
+                      const SizedBox(height: 4),
                       Text(
                         'Gọi món · Báo bếp · Thanh toán',
                         textAlign: TextAlign.center,
